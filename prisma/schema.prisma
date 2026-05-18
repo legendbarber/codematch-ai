@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Analysis {
+  id          String             @id @default(cuid())
+  sessionId   String
+  repoUrl     String
+  repoOwner   String?
+  repoName    String?
+  provider    String
+  optionsJson String
+  status      String             @default("queued")
+  summary     String?
+  totalsJson  String?
+  error       String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  completedAt DateTime?
+  documents   UploadedDocument[]
+  findings    Finding[]
+  steps       AnalysisStep[]
+
+  @@index([sessionId, createdAt])
+  @@index([status])
+}
+
+model UploadedDocument {
+  id             String   @id @default(cuid())
+  analysisId     String
+  name           String
+  mimeType       String
+  size           Int
+  extractedChars Int
+  createdAt      DateTime @default(now())
+  analysis       Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+}
+
+model AnalysisStep {
+  id         String   @id @default(cuid())
+  analysisId String
+  order      Int
+  key        String
+  label      String
+  status     String   @default("pending")
+  message    String?
+  durationMs Int?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  analysis   Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@unique([analysisId, key])
+  @@index([analysisId, order])
+}
+
+model Finding {
+  id               String   @id @default(cuid())
+  analysisId       String
+  type             String
+  severity         String
+  title            String
+  documentEvidence String
+  codeEvidence     String
+  relatedFilesJson String
+  recommendation   String
+  confidence       Float
+  createdAt        DateTime @default(now())
+  analysis         Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([analysisId, severity])
+  @@index([analysisId, type])
+}
