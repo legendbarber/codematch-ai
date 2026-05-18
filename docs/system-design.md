@@ -150,6 +150,15 @@ Not stored:
 - Full GitHub source code.
 - Web-entered OpenAI/Gemini API keys.
 
+## Report Rendering And History
+
+- The active report view renders `Analysis`, `UploadedDocument`, `AnalysisStep`, and `Finding` rows returned by `GET /api/analyses/:id`.
+- After a new analysis is created, the browser loads that analysis detail and polls until completion.
+- The history list is loaded from `GET /api/analyses`.
+- Clicking a history item calls `GET /api/analyses/:id`, replaces the active report with that saved result, and scrolls to the report section.
+- The `DB 저장 확인` panel on the report view shows the saved analysis ID, repository, provider, status, document metadata count, completed step count, finding count, and uploaded document metadata.
+- The report body is always rendered when an analysis exists. If there are findings, it shows finding cards. If there are zero findings, it still shows a complete report with summary, metadata, scope, uploaded documents, a no-critical-mismatch result, and recommended next actions.
+
 ## Deployment Notes
 
 - Local and cloud runtime both use Supabase Postgres.

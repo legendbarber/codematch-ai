@@ -6,6 +6,7 @@ import {
   ChevronDown,
   Clock3,
   Code2,
+  Database,
   ExternalLink,
   FileText,
   Flag,
@@ -46,6 +47,7 @@ type AnalysisSummary = {
   error: string | null;
   totals: Totals;
   createdAt: string;
+  completedAt: string | null;
 };
 
 type AnalysisDetail = AnalysisSummary & {
@@ -86,7 +88,7 @@ const DEFAULT_STEPS = [
 ];
 
 export default function Home() {
-  const [repoUrl, setRepoUrl] = useState("https://github.com/vercel/next.js");
+  const [repoUrl, setRepoUrl] = useState("");
   const [provider, setProvider] = useState<Provider>("openai");
   const [apiKey, setApiKey] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -176,6 +178,7 @@ export default function Home() {
       }
       await loadAnalysis(payload.analysis.id);
       await loadHistory();
+      scrollToReport();
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : String(submitError));
     } finally {
@@ -183,8 +186,19 @@ export default function Home() {
     }
   }
 
+  async function handleHistorySelect(id: string) {
+    await loadAnalysis(id);
+    scrollToReport();
+  }
+
   function removeFile(fileName: string) {
     setFiles((current) => current.filter((file) => file.name !== fileName));
+  }
+
+  function scrollToReport() {
+    window.setTimeout(() => {
+      document.getElementById("report")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
   }
 
   return (
@@ -205,40 +219,7 @@ export default function Home() {
 
       <section className="hero">
         <div className="heroText">
-          <h1>
-            개발 문서와 코드의
-            <span> 불일치를 자동으로 탐지하세요</span>
-          </h1>
-          <p>
-            공개 GitHub Repository와 개발 문서를 비교해 기능 누락, API 불일치,
-            outdated 문서 가능성을 AI가 분석합니다.
-          </p>
-          <div className="heroActions">
-            <a className="primaryLink" href="#analyze">
-              <Sparkles size={18} />
-              분석 시작
-            </a>
-            <a className="secondaryLink" href="#report">
-              <FileText size={18} />
-              리포트 보기
-            </a>
-          </div>
-        </div>
-        <div className="heroVisual" aria-hidden="true">
-          <div className="docPanel leftDoc">
-            <FileText size={28} />
-            <span />
-            <span />
-            <span />
-          </div>
-          <div className="aiNode">AI</div>
-          <div className="docPanel rightDoc">
-            <Code2 size={28} />
-            <span />
-            <span />
-            <span />
-          </div>
-          <div className="connection" />
+          <h1>CodeMatch AI</h1>
         </div>
       </section>
 
@@ -254,7 +235,7 @@ export default function Home() {
             <input
               value={repoUrl}
               onChange={(event) => setRepoUrl(event.target.value)}
-              placeholder="https://github.com/example/project"
+              placeholder="https://github.com/owner/repository"
             />
           </label>
 
@@ -412,6 +393,8 @@ export default function Home() {
           <Metric icon={<Flag />} label="Low" value={active?.totals.low ?? 0} tone="green" />
         </div>
 
+        {active ? <ReportStorageSummary analysis={active} /> : null}
+
         <div className="resultLayout">
           <div className="findings">
             {active?.status === "failed" ? (
@@ -420,13 +403,13 @@ export default function Home() {
                 <strong>분석 실패</strong>
                 <span>{active.error}</span>
               </div>
-            ) : active?.findings?.length ? (
-              active.findings.map((finding) => <FindingCard key={finding.id} finding={finding} />)
+            ) : active ? (
+              <AnalysisReport analysis={active} />
             ) : (
               <div className="emptyState">
                 <SearchCheck size={28} />
-                <strong>표시할 finding이 없습니다</strong>
-                <span>분석 완료 후 높은 신뢰도의 불일치가 없으면 빈 리포트가 유지됩니다.</span>
+                <strong>분석 리포트 대기 중</strong>
+                <span>분석을 실행하면 요약, 검토 범위, finding, 권장 조치가 이 영역에 표시됩니다.</span>
               </div>
             )}
           </div>
@@ -468,7 +451,7 @@ export default function Home() {
             <button
               className={`historyItem ${active?.id === item.id ? "active" : ""}`}
               key={item.id}
-              onClick={() => void loadAnalysis(item.id)}
+              onClick={() => void handleHistorySelect(item.id)}
             >
               <span>
                 <strong>{item.repoOwner && item.repoName ? `${item.repoOwner}/${item.repoName}` : item.repoUrl}</strong>
@@ -482,6 +465,152 @@ export default function Home() {
         </div>
       </section>
     </main>
+  );
+}
+
+function AnalysisReport({ analysis }: { analysis: AnalysisDetail }) {
+  const repository =
+    analysis.repoOwner && analysis.repoName ? `${analysis.repoOwner}/${analysis.repoName}` : analysis.repoUrl;
+  const completedAt = analysis.completedAt
+    ? new Date(analysis.completedAt).toLocaleString("ko-KR")
+    : "분석 진행 중";
+  const completedSteps = analysis.steps.filter((step) => step.status === "completed").length;
+
+  return (
+    <article className="reportDocument">
+      <header className="reportHeader">
+        <div>
+          <span className="reportEyebrow">CodeMatch AI Report</span>
+          <h3>{repository} 정합성 분석 리포트</h3>
+          <p>{analysis.summary ?? "분석 결과 요약을 생성하는 중입니다."}</p>
+        </div>
+        <StatusPill status={analysis.status} />
+      </header>
+
+      <div className="reportMetaGrid">
+        <ReportMeta label="Repository" value={repository} />
+        <ReportMeta label="Provider" value={analysis.provider.toUpperCase()} />
+        <ReportMeta label="완료 시각" value={completedAt} />
+        <ReportMeta label="분석 문서" value={`${analysis.documents.length}개`} />
+        <ReportMeta label="단계 로그" value={`${completedSteps}/${analysis.steps.length}`} />
+        <ReportMeta label="Finding" value={`${analysis.findings.length}개`} />
+      </div>
+
+      <section className="reportBlock">
+        <h4>검토 범위</h4>
+        <div className="scopeList">
+          <span>공개 GitHub 저장소 코드 수집</span>
+          <span>업로드 문서 parsing</span>
+          <span>기능 누락 탐지: {analysis.totals.missingFeature}건</span>
+          <span>API 불일치 탐지: {analysis.totals.apiMismatch}건</span>
+          <span>Outdated 문서 탐지: {analysis.totals.outdatedDoc}건</span>
+        </div>
+      </section>
+
+      <section className="reportBlock">
+        <h4>업로드 문서</h4>
+        {analysis.documents.length ? (
+          <div className="reportDocuments">
+            {analysis.documents.map((document) => (
+              <div key={document.id}>
+                <strong>{document.name}</strong>
+                <span>
+                  {formatBytes(document.size)} · {document.extractedChars.toLocaleString("ko-KR")} chars extracted
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p>저장된 문서 메타데이터가 없습니다.</p>
+        )}
+      </section>
+
+      <section className="reportBlock">
+        <h4>탐지 결과</h4>
+        {analysis.findings.length ? (
+          <div className="findingList">
+            {analysis.findings.map((finding) => (
+              <FindingCard key={finding.id} finding={finding} />
+            ))}
+          </div>
+        ) : (
+          <div className="noFindingReport">
+            <SearchCheck size={24} />
+            <div>
+              <strong>중요 불일치가 발견되지 않았습니다</strong>
+              <p>
+                저장된 분석 결과 기준으로 기능 누락, API 불일치, outdated 문서 항목이 0건입니다.
+                이는 AI 기반 의심 항목이 없다는 뜻이며, 최종 검수 전 주요 파일과 테스트를 함께 확인하는 것을 권장합니다.
+              </p>
+            </div>
+          </div>
+        )}
+      </section>
+
+      <section className="reportBlock">
+        <h4>권장 다음 조치</h4>
+        <div className="actionList">
+          <span>분석 요약과 finding 근거를 기준으로 문서 최신성을 검토하세요.</span>
+          <span>finding이 0건이어도 핵심 API 응답 필드와 인증/권한 흐름은 수동으로 한 번 더 확인하세요.</span>
+          <span>히스토리에서 이전 분석을 열어 변경 전후 리포트 차이를 비교하세요.</span>
+        </div>
+      </section>
+    </article>
+  );
+}
+
+function ReportMeta({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="reportMeta">
+      <small>{label}</small>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function ReportStorageSummary({ analysis }: { analysis: AnalysisDetail }) {
+  const completedSteps = analysis.steps.filter((step) => step.status === "completed").length;
+  return (
+    <section className="storageSummary" aria-label="DB 저장 확인">
+      <div className="storageTitle">
+        <Database size={20} />
+        <div>
+          <strong>DB 저장 확인</strong>
+          <span>이 리포트는 Supabase에 저장된 분석 데이터를 다시 불러와 표시합니다.</span>
+        </div>
+      </div>
+      <div className="storageGrid">
+        <StorageItem label="Analysis ID" value={analysis.id} />
+        <StorageItem
+          label="Repository"
+          value={analysis.repoOwner && analysis.repoName ? `${analysis.repoOwner}/${analysis.repoName}` : analysis.repoUrl}
+        />
+        <StorageItem label="Provider" value={analysis.provider.toUpperCase()} />
+        <StorageItem label="Status" value={statusLabel(analysis.status)} />
+        <StorageItem label="문서 메타데이터" value={`${analysis.documents.length}개 저장`} />
+        <StorageItem label="단계 로그" value={`${completedSteps}/${analysis.steps.length} 완료`} />
+        <StorageItem label="Finding" value={`${analysis.findings.length}개 저장`} />
+        <StorageItem label="완료 시각" value={analysis.completedAt ? new Date(analysis.completedAt).toLocaleString("ko-KR") : "-"} />
+      </div>
+      {analysis.documents.length ? (
+        <div className="documentList">
+          {analysis.documents.map((document) => (
+            <span key={document.id}>
+              {document.name} · {formatBytes(document.size)} · {document.extractedChars.toLocaleString("ko-KR")} chars
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function StorageItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="storageItem">
+      <small>{label}</small>
+      <strong>{value}</strong>
+    </div>
   );
 }
 

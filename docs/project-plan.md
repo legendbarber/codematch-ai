@@ -20,6 +20,9 @@ CodeMatch AI는 개발 문서와 GitHub 공개 저장소의 실제 코드 간 �
 - OpenAI/Gemini 기반 문서-코드 semantic 비교.
 - API key가 없을 때 동작하는 로컬 휴리스틱 fallback.
 - 익명 세션 기반 분석 히스토리, 진행 상태, 상세 리포트 UI.
+- 분석 히스토리 클릭 시 이전 리포트 재조회 및 표시.
+- 리포트 화면에서 Supabase 저장 상태 확인.
+- finding이 0건이어도 요약, 메타 정보, 검토 범위, 업로드 문서, 권장 조치가 포함된 리포트 표시.
 
 ## Non-Goals
 
@@ -58,6 +61,8 @@ CodeMatch AI는 개발 문서와 GitHub 공개 저장소의 실제 코드 간 �
 - 로컬 실행 가능한 베타 구현 완료.
 - Supabase Postgres schema sync 완료.
 - OpenAI/Gemini provider 선택과 웹 API key 입력 기능 구현 완료.
+- 분석 결과와 히스토리는 Supabase 저장 데이터를 다시 조회해 화면에 표시한다.
+- finding 유무와 상관없이 분석 리포트 본문을 항상 표시한다.
 - API key 미입력 시 heuristic fallback 동작.
 - 다음 단계는 실제 OpenAI/Gemini API key를 사용한 품질 검증과 Cloud Run 배포다.
 
