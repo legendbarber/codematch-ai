@@ -51,6 +51,7 @@ Open <http://localhost:3000>.
 
 - [Project Plan](./docs/project-plan.md)
 - [System Design](./docs/system-design.md)
+- [Codebase Map](./docs/codebase-map.md)
 - [DB Verification Guide](./docs/db-verification.md)
 - [Google Cloud Deployment Notes](./docs/deployment-gcp.md)
 

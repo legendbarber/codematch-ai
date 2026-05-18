@@ -2,7 +2,7 @@ node_modules/
 .next/
 out/
 coverage/
-.env
+# .env
 .env*.local
 dev.db
 dev.db-journal
