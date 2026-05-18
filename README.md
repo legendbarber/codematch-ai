@@ -21,6 +21,22 @@ Both scripts install dependencies if needed, generate the Prisma client, sync th
 
 If `.env` does not exist, the script creates it from `.env.example` and stops. Set `DATABASE_URL` and `DIRECT_URL`, then run the script again.
 
+### Stop Local Server
+
+Linux / macOS:
+
+```bash
+Ctrl + C
+```
+
+Windows PowerShell:
+
+```powershell
+Ctrl + C
+```
+
+If the terminal asks `Terminate batch job (Y/N)?` on Windows, type `Y` and press Enter.
+
 ### Manual Setup
 
 ```bash
@@ -54,6 +70,3 @@ Open <http://localhost:3000>.
 - [Codebase Map](./docs/codebase-map.md)
 - [DB Verification Guide](./docs/db-verification.md)
 - [Google Cloud Deployment Notes](./docs/deployment-gcp.md)
-
-### API Keys
-gemini : AIzaSyBOLnYB0SGatpLjS2IczZ7xi383FY5U8mk

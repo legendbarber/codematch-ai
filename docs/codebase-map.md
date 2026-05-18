@@ -71,6 +71,11 @@ AI 기반 문서-코드 비교 분석 모듈이다.
 - `scripts/run-local.sh`: Linux/macOS용 실행 스크립트. 의존성 설치, Prisma client 생성, DB schema sync, dev server 실행을 수행한다.
 - `scripts/run-local.ps1`: Windows PowerShell용 실행 스크립트. Linux/macOS 스크립트와 같은 작업을 수행한다.
 
+서버 종료:
+
+- Linux/macOS: 서버를 실행한 터미널에서 `Ctrl + C`.
+- Windows PowerShell: 서버를 실행한 터미널에서 `Ctrl + C`, 종료 확인이 뜨면 `Y` 입력 후 Enter.
+
 ## `tests`
 
 Vitest 단위 테스트다.
