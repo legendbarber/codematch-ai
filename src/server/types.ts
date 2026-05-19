@@ -37,6 +37,14 @@ export type ParsedDocument = {
   mimeType: string;
   size: number;
   text: string;
+  chunks: DocumentChunk[];
+};
+
+export type DocumentChunk = {
+  documentName: string;
+  index: number;
+  heading: string | null;
+  text: string;
 };
 
 export type SourceFile = {

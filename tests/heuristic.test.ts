@@ -25,6 +25,14 @@ describe("heuristicAnalyze", () => {
           mimeType: "text/markdown",
           size: 100,
           text: "API\nGET /users\n로그인 기능을 제공한다.",
+          chunks: [
+            {
+              documentName: "README.md",
+              index: 0,
+              heading: "API",
+              text: "API\nGET /users\n로그인 기능을 제공한다.",
+            },
+          ],
         },
       ],
       chunks: [

@@ -1,3 +1,5 @@
+import { createReportRecommendationSummary } from "./report-summary";
+
 type AnalysisWithRelations = {
   id: string;
   repoUrl: string;
@@ -42,22 +44,25 @@ type AnalysisWithRelations = {
 };
 
 export function serializeAnalysis(analysis: AnalysisWithRelations) {
+  const findings =
+    analysis.findings?.map((finding) => ({
+      ...finding,
+      relatedFiles: parseJson(finding.relatedFilesJson, []),
+      relatedFilesJson: undefined,
+    })) ?? [];
+
   return {
     ...analysis,
     options: parseJson(analysis.optionsJson, {}),
     totals: parseJson(analysis.totalsJson, defaultTotals()),
+    reportRecommendationSummary: createReportRecommendationSummary(findings),
     relatedFilesJson: undefined,
     optionsJson: undefined,
     totalsJson: undefined,
     createdAt: analysis.createdAt.toISOString(),
     updatedAt: analysis.updatedAt.toISOString(),
     completedAt: analysis.completedAt?.toISOString() ?? null,
-    findings:
-      analysis.findings?.map((finding) => ({
-        ...finding,
-        relatedFiles: parseJson(finding.relatedFilesJson, []),
-        relatedFilesJson: undefined,
-      })) ?? [],
+    findings,
     documents: analysis.documents ?? [],
     steps: analysis.steps ?? [],
   };

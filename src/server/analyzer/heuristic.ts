@@ -33,7 +33,8 @@ export function heuristicAnalyze({
   options,
   reason,
 }: HeuristicInput): AnalysisReport {
-  const docText = documents.map((document) => document.text).join("\n").toLowerCase();
+  const documentChunks = documents.flatMap((document) => document.chunks);
+  const docText = documentChunks.map((chunk) => chunk.text).join("\n").toLowerCase();
   const codeText = chunks.map((chunk) => chunk.text).join("\n").toLowerCase();
   const findings: ReportFinding[] = [];
 
@@ -92,7 +93,9 @@ export function heuristicAnalyze({
 }
 
 function findEndpointMismatches(documents: ParsedDocument[], chunks: CodeChunk[]): ReportFinding[] {
-  const documentEndpoints = unique(documents.flatMap((document) => extractEndpointSignals(document.text)));
+  const documentEndpoints = unique(
+    documents.flatMap((document) => document.chunks.flatMap((chunk) => extractEndpointSignals(chunk.text))),
+  );
   const codeEndpoints = unique(chunks.flatMap((chunk) => extractEndpointSignals(chunk.text)));
   const codeEndpointSet = new Set(codeEndpoints.map(normalizeEndpoint));
   const findings: ReportFinding[] = [];
