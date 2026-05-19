@@ -9,8 +9,15 @@ type PromptInput = {
 
 export function buildAnalysisPrompt({ repository, documents, chunks }: PromptInput) {
   const codeSignals = summarizeCodeSignals(chunks);
-  const documentText = documents
-    .map((document) => `# Document: ${document.name}\n${limit(document.text, 16_000)}`)
+  const documentChunks = documents.flatMap((document) => document.chunks);
+  const documentText = documentChunks
+    .slice(0, 50)
+    .map(
+      (chunk) =>
+        `# Document: ${chunk.documentName} [chunk ${chunk.index + 1}]${
+          chunk.heading ? `\n## Section: ${chunk.heading}` : ""
+        }\n${limit(chunk.text, 2_400)}`,
+    )
     .join("\n\n---\n\n");
   const codeText = chunks
     .slice(0, 70)
@@ -53,7 +60,7 @@ Collected file paths:
 ${codeSignals.files.join("\n")}
 
 Uploaded documents:
-${documentText}
+${documentText || documents.map((document) => `# Document: ${document.name}\n${limit(document.text, 4_000)}`).join("\n\n---\n\n")}
 
 Repository code snippets:
 ${codeText}
