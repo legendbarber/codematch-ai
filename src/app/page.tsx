@@ -7,6 +7,7 @@ import {
   Clock3,
   Code2,
   Database,
+  Download,
   ExternalLink,
   FileText,
   Flag,
@@ -15,6 +16,7 @@ import {
   KeyRound,
   Loader2,
   Play,
+  Printer,
   RefreshCw,
   SearchCheck,
   ShieldCheck,
@@ -22,7 +24,15 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ChangeEvent,
+  type DragEvent,
+  type FormEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 type Provider = "openai" | "gemini";
 
@@ -87,11 +97,15 @@ const DEFAULT_STEPS = [
   "결과 리포트 생성",
 ];
 
+const ACCEPTED_DOCUMENT_EXTENSIONS = [".md", ".markdown", ".txt", ".pdf", ".json", ".yaml", ".yml"];
+const MAX_DOCUMENTS = 5;
+
 export default function Home() {
   const [repoUrl, setRepoUrl] = useState("");
   const [provider, setProvider] = useState<Provider>("openai");
   const [apiKey, setApiKey] = useState("");
   const [files, setFiles] = useState<File[]>([]);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [options, setOptions] = useState({
     missingFeature: true,
     apiMismatch: true,
@@ -191,8 +205,75 @@ export default function Home() {
     scrollToReport();
   }
 
-  function removeFile(fileName: string) {
-    setFiles((current) => current.filter((file) => file.name !== fileName));
+  function addFiles(nextFiles: File[]) {
+    const acceptedFiles = nextFiles.filter(isAcceptedDocument);
+
+    if (acceptedFiles.length !== nextFiles.length) {
+      setError("지원 형식은 md, txt, json, yaml, pdf입니다.");
+    } else {
+      setError(null);
+    }
+
+    setFiles((current) => {
+      const merged = [...current];
+      const seen = new Set(current.map(fileKey));
+
+      for (const file of acceptedFiles) {
+        if (merged.length >= MAX_DOCUMENTS) break;
+        const key = fileKey(file);
+        if (!seen.has(key)) {
+          merged.push(file);
+          seen.add(key);
+        }
+      }
+
+      if (acceptedFiles.length && current.length + acceptedFiles.length > MAX_DOCUMENTS) {
+        setError(`개발 문서는 최대 ${MAX_DOCUMENTS}개까지 업로드할 수 있습니다.`);
+      }
+
+      return merged;
+    });
+  }
+
+  function handleFileInputChange(event: ChangeEvent<HTMLInputElement>) {
+    addFiles(Array.from(event.target.files ?? []));
+    event.target.value = "";
+  }
+
+  function handleDragEnter(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.dataTransfer.types.includes("Files")) {
+      setIsDraggingFile(true);
+    }
+  }
+
+  function handleDragOver(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = "copy";
+    if (event.dataTransfer.types.includes("Files")) {
+      setIsDraggingFile(true);
+    }
+  }
+
+  function handleDragLeave(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+      setIsDraggingFile(false);
+    }
+  }
+
+  function handleDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingFile(false);
+    addFiles(Array.from(event.dataTransfer.files));
+  }
+
+  function removeFile(key: string) {
+    setFiles((current) => current.filter((file) => fileKey(file) !== key));
   }
 
   function scrollToReport() {
@@ -241,27 +322,38 @@ export default function Home() {
 
           <div className="field">
             <span>개발 문서 업로드</span>
-            <div className="fileGrid">
-              {files.map((file) => (
-                <div className="fileChip" key={file.name}>
-                  <FileText size={22} />
-                  <div>
-                    <strong>{file.name}</strong>
-                    <small>{formatBytes(file.size)}</small>
+            <div
+              className={`uploadDropZone ${isDraggingFile ? "dragActive" : ""}`}
+              onDragEnter={handleDragEnter}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <div className="fileGrid">
+                {files.map((file) => (
+                  <div className="fileChip" key={fileKey(file)}>
+                    <FileText size={22} />
+                    <div>
+                      <strong>{file.name}</strong>
+                      <small>{formatBytes(file.size)}</small>
+                    </div>
+                    <button type="button" aria-label={`${file.name} 제거`} onClick={() => removeFile(fileKey(file))}>
+                      <X size={16} />
+                    </button>
                   </div>
-                  <button type="button" aria-label={`${file.name} 제거`} onClick={() => removeFile(file.name)}>
-                    <X size={16} />
-                  </button>
-                </div>
-              ))}
-              <button
-                type="button"
-                className="uploadBox"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Upload size={22} />
-                파일 추가
-              </button>
+                ))}
+                <button
+                  type="button"
+                  className="uploadBox"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload size={22} />
+                  <span>
+                    <strong>파일 추가</strong>
+                    <small>클릭하거나 문서를 끌어다 놓기</small>
+                  </span>
+                </button>
+              </div>
             </div>
             <input
               ref={fileInputRef}
@@ -269,7 +361,7 @@ export default function Home() {
               type="file"
               multiple
               accept=".md,.markdown,.txt,.pdf,.json,.yaml,.yml"
-              onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
+              onChange={handleFileInputChange}
             />
           </div>
 
@@ -376,10 +468,20 @@ export default function Home() {
             <p>{active?.summary ?? "분석을 실행하면 리포트 요약과 상세 항목이 표시됩니다."}</p>
           </div>
           {active ? (
-            <button className="ghostButton" onClick={() => void loadAnalysis(active.id)}>
-              <RefreshCw size={16} />
-              새로고침
-            </button>
+            <div className="headerActions">
+              <button className="ghostButton" type="button" onClick={() => printPdfReport(active)}>
+                <Printer size={16} />
+                PDF 저장
+              </button>
+              <button className="ghostButton" type="button" onClick={() => downloadMarkdownReport(active)}>
+                <Download size={16} />
+                Markdown
+              </button>
+              <button className="ghostButton" type="button" onClick={() => void loadAnalysis(active.id)}>
+                <RefreshCw size={16} />
+                새로고침
+              </button>
+            </div>
           ) : null}
         </div>
 
@@ -714,6 +816,676 @@ function formatBytes(size: number) {
   if (size < 1024) return `${size} B`;
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
   return `${(size / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function fileKey(file: File) {
+  return `${file.name}-${file.size}-${file.lastModified}`;
+}
+
+function isAcceptedDocument(file: File) {
+  const lowerName = file.name.toLowerCase();
+  return ACCEPTED_DOCUMENT_EXTENSIONS.some((extension) => lowerName.endsWith(extension));
+}
+
+function downloadMarkdownReport(analysis: AnalysisDetail) {
+  const blob = new Blob([buildReportMarkdown(analysis)], {
+    type: "text/markdown;charset=utf-8",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = reportFileName(analysis);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function printPdfReport(analysis: AnalysisDetail) {
+  const printWindow = window.open("", "_blank", "width=980,height=720");
+  if (!printWindow) {
+    window.alert("팝업이 차단되어 PDF 창을 열 수 없습니다. 브라우저 팝업 허용 후 다시 시도하세요.");
+    return;
+  }
+
+  printWindow.document.open();
+  printWindow.document.write(buildPrintableReportHtml(analysis));
+  printWindow.document.close();
+  printWindow.focus();
+  window.setTimeout(() => {
+    printWindow.print();
+  }, 350);
+}
+
+function buildReportMarkdown(analysis: AnalysisDetail) {
+  const repository =
+    analysis.repoOwner && analysis.repoName ? `${analysis.repoOwner}/${analysis.repoName}` : analysis.repoUrl;
+  const completedAt = analysis.completedAt
+    ? new Date(analysis.completedAt).toLocaleString("ko-KR")
+    : "분석 진행 중";
+  const createdAt = new Date(analysis.createdAt).toLocaleString("ko-KR");
+
+  return [
+    `# ${repository} 정합성 분석 리포트`,
+    "",
+    "## 요약",
+    analysis.summary ?? "분석 결과 요약이 없습니다.",
+    "",
+    "## 메타 정보",
+    `- Analysis ID: ${analysis.id}`,
+    `- Repository: ${repository}`,
+    `- Provider: ${analysis.provider.toUpperCase()}`,
+    `- Status: ${statusLabel(analysis.status)}`,
+    `- Created At: ${createdAt}`,
+    `- Completed At: ${completedAt}`,
+    "",
+    "## 탐지 요약",
+    `- 총 불일치: ${analysis.totals.total}`,
+    `- 기능 누락: ${analysis.totals.missingFeature}`,
+    `- API 불일치: ${analysis.totals.apiMismatch}`,
+    `- Outdated 문서: ${analysis.totals.outdatedDoc}`,
+    `- High: ${analysis.totals.high}`,
+    `- Medium: ${analysis.totals.medium}`,
+    `- Low: ${analysis.totals.low}`,
+    "",
+    "## 업로드 문서",
+    ...documentMarkdownLines(analysis),
+    "",
+    "## 분석 단계",
+    ...stepMarkdownLines(analysis),
+    "",
+    "## 탐지 결과",
+    ...findingMarkdownLines(analysis),
+    "",
+    "## 권장 다음 조치",
+    "- 분석 요약과 finding 근거를 기준으로 문서 최신성을 검토하세요.",
+    "- finding이 0건이어도 핵심 API 응답 필드와 인증/권한 흐름은 수동으로 한 번 더 확인하세요.",
+    "- 히스토리에서 이전 분석을 열어 변경 전후 리포트 차이를 비교하세요.",
+    "",
+  ].join("\n");
+}
+
+function documentMarkdownLines(analysis: AnalysisDetail) {
+  if (!analysis.documents.length) return ["저장된 문서 메타데이터가 없습니다."];
+
+  return analysis.documents.map(
+    (document) =>
+      `- ${document.name} (${formatBytes(document.size)}, ${document.extractedChars.toLocaleString("ko-KR")} chars extracted)`,
+  );
+}
+
+function stepMarkdownLines(analysis: AnalysisDetail) {
+  if (!analysis.steps.length) return ["저장된 단계 로그가 없습니다."];
+
+  return analysis.steps.map((step) => {
+    const duration = step.durationMs ? `, ${formatDuration(step.durationMs)}` : "";
+    const message = step.message ? `, ${step.message}` : "";
+    return `- ${step.label}: ${statusLabel(step.status)}${duration}${message}`;
+  });
+}
+
+function findingMarkdownLines(analysis: AnalysisDetail) {
+  if (!analysis.findings.length) {
+    return [
+      "중요 불일치가 발견되지 않았습니다.",
+      "",
+      "저장된 분석 결과 기준으로 기능 누락, API 불일치, outdated 문서 항목이 0건입니다.",
+    ];
+  }
+
+  return analysis.findings.flatMap((finding, index) => [
+    `### ${index + 1}. ${finding.title}`,
+    "",
+    `- 유형: ${typeLabel(finding.type)}`,
+    `- 심각도: ${finding.severity}`,
+    `- Confidence: ${Math.round(finding.confidence * 100)}%`,
+    `- 관련 파일: ${finding.relatedFiles.length ? finding.relatedFiles.join(", ") : "관련 파일 특정 어려움"}`,
+    "",
+    "문서 근거:",
+    finding.documentEvidence,
+    "",
+    "코드 분석 결과:",
+    finding.codeEvidence,
+    "",
+    "권장 조치:",
+    finding.recommendation,
+    "",
+  ]);
+}
+
+function reportFileName(analysis: AnalysisDetail) {
+  const repository =
+    analysis.repoOwner && analysis.repoName ? `${analysis.repoOwner}-${analysis.repoName}` : analysis.id;
+  const date = new Date(analysis.completedAt ?? analysis.createdAt).toISOString().slice(0, 10);
+  return `codematch-report-${sanitizeFileName(repository)}-${date}.md`;
+}
+
+function sanitizeFileName(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+}
+
+function buildPrintableReportHtml(analysis: AnalysisDetail) {
+  const repository =
+    analysis.repoOwner && analysis.repoName ? `${analysis.repoOwner}/${analysis.repoName}` : analysis.repoUrl;
+  const completedAt = analysis.completedAt
+    ? new Date(analysis.completedAt).toLocaleString("ko-KR")
+    : "분석 진행 중";
+  const createdAt = new Date(analysis.createdAt).toLocaleString("ko-KR");
+  const fileName = reportFileName(analysis).replace(/\.md$/, ".pdf");
+
+  return `<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeHtml(fileName)}</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 14mm;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: #111827;
+      background: #eef3fb;
+      font-family: Inter, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", Arial, sans-serif;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      padding: 18mm;
+      background: #ffffff;
+    }
+
+    .cover {
+      position: relative;
+      overflow: hidden;
+      min-height: 116mm;
+      padding: 18mm;
+      border-radius: 18px;
+      color: #ffffff;
+      background:
+        linear-gradient(135deg, rgba(14, 91, 255, 0.96), rgba(9, 29, 94, 0.98)),
+        radial-gradient(circle at 84% 18%, rgba(255, 255, 255, 0.22), transparent 34%);
+    }
+
+    .cover::after {
+      position: absolute;
+      right: -34mm;
+      bottom: -44mm;
+      width: 96mm;
+      height: 96mm;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 50%;
+      content: "";
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.34);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .mark {
+      display: inline-grid;
+      width: 24px;
+      height: 24px;
+      place-items: center;
+      border-radius: 7px;
+      color: #0e5bff;
+      background: #ffffff;
+      font-weight: 900;
+    }
+
+    h1 {
+      position: relative;
+      z-index: 1;
+      max-width: 128mm;
+      margin: 22mm 0 7mm;
+      font-size: 30px;
+      line-height: 1.22;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      position: relative;
+      z-index: 1;
+      max-width: 138mm;
+      margin: 0;
+      color: #dbe7ff;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .coverMeta {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 18mm;
+    }
+
+    .coverMeta div,
+    .card,
+    .section,
+    .finding {
+      break-inside: avoid;
+    }
+
+    .coverMeta div {
+      min-height: 24mm;
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    small {
+      display: block;
+      color: inherit;
+      opacity: 0.72;
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    strong {
+      overflow-wrap: anywhere;
+    }
+
+    .coverMeta strong {
+      display: block;
+      margin-top: 5px;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .content {
+      padding-top: 10mm;
+    }
+
+    .section {
+      margin-top: 9mm;
+    }
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 4mm;
+      color: #0c1533;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    h2::before {
+      width: 5px;
+      height: 18px;
+      border-radius: 999px;
+      background: #0e5bff;
+      content: "";
+    }
+
+    p {
+      margin: 0;
+      color: #465572;
+      font-size: 11.5px;
+      line-height: 1.7;
+    }
+
+    .metrics,
+    .metaGrid {
+      display: grid;
+      gap: 8px;
+    }
+
+    .metrics {
+      grid-template-columns: repeat(4, 1fr);
+      margin-top: 6mm;
+    }
+
+    .metaGrid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .card {
+      padding: 10px;
+      border: 1px solid #dce5f3;
+      border-radius: 12px;
+      background: #fbfdff;
+    }
+
+    .metricValue {
+      display: block;
+      margin-top: 5px;
+      font-size: 21px;
+      font-weight: 900;
+    }
+
+    .red {
+      color: #e43535;
+    }
+
+    .orange {
+      color: #f07800;
+    }
+
+    .blue {
+      color: #0e5bff;
+    }
+
+    .green {
+      color: #119c55;
+    }
+
+    .list {
+      display: grid;
+      gap: 7px;
+    }
+
+    .row {
+      padding: 9px 10px;
+      border: 1px solid #e1e8f4;
+      border-radius: 10px;
+      background: #fbfdff;
+      font-size: 11px;
+      line-height: 1.55;
+    }
+
+    .row strong {
+      display: block;
+      margin-bottom: 2px;
+      color: #0c1533;
+      font-size: 11.5px;
+    }
+
+    .finding {
+      margin-top: 8px;
+      padding: 12px;
+      border: 1px solid #dce5f3;
+      border-left: 4px solid #f07800;
+      border-radius: 12px;
+      background: #ffffff;
+    }
+
+    .finding.high {
+      border-left-color: #e43535;
+    }
+
+    .finding.low {
+      border-left-color: #119c55;
+    }
+
+    .findingHead {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 9px;
+    }
+
+    .finding h3 {
+      margin: 0;
+      color: #0c1533;
+      font-size: 14px;
+      line-height: 1.35;
+    }
+
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      justify-content: flex-end;
+    }
+
+    .badge {
+      display: inline-flex;
+      min-height: 22px;
+      align-items: center;
+      padding: 0 8px;
+      border-radius: 999px;
+      background: #eef4ff;
+      color: #0e5bff;
+      font-size: 9.5px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .badge.danger {
+      color: #d82020;
+      background: #ffe9e9;
+    }
+
+    .badge.warn {
+      color: #b35400;
+      background: #fff2df;
+    }
+
+    .evidenceGrid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .evidence {
+      min-width: 0;
+      padding: 9px;
+      border: 1px solid #e1e8f4;
+      border-radius: 10px;
+      background: #fbfdff;
+    }
+
+    .evidence b {
+      display: block;
+      margin-bottom: 4px;
+      color: #0c1533;
+      font-size: 10.5px;
+    }
+
+    .evidence p {
+      overflow-wrap: anywhere;
+      font-size: 10.5px;
+    }
+
+    .footer {
+      margin-top: 12mm;
+      padding-top: 5mm;
+      border-top: 1px solid #dce5f3;
+      color: #7a8498;
+      font-size: 10px;
+      line-height: 1.6;
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+      }
+
+      .page {
+        width: auto;
+        min-height: auto;
+        margin: 0;
+        padding: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="cover">
+      <div class="brand"><span class="mark">&lt;/&gt;</span> CodeMatch AI Report</div>
+      <h1>${escapeHtml(repository)}<br />정합성 분석 리포트</h1>
+      <p class="subtitle">${escapeHtml(analysis.summary ?? "분석 결과 요약이 없습니다.")}</p>
+      <div class="coverMeta">
+        <div><small>Provider</small><strong>${escapeHtml(analysis.provider.toUpperCase())}</strong></div>
+        <div><small>Status</small><strong>${escapeHtml(statusLabel(analysis.status))}</strong></div>
+        <div><small>Completed</small><strong>${escapeHtml(completedAt)}</strong></div>
+      </div>
+    </section>
+
+    <section class="content">
+      <section class="section">
+        <h2>탐지 요약</h2>
+        <p>문서와 코드 간의 의심 불일치 항목을 유형과 심각도 기준으로 요약했습니다.</p>
+        <div class="metrics">
+          ${printMetric("총 불일치", analysis.totals.total, "red")}
+          ${printMetric("기능 누락", analysis.totals.missingFeature, "orange")}
+          ${printMetric("API 불일치", analysis.totals.apiMismatch, "blue")}
+          ${printMetric("Outdated 문서", analysis.totals.outdatedDoc, "green")}
+        </div>
+        <div class="metrics">
+          ${printMetric("High", analysis.totals.high, "red")}
+          ${printMetric("Medium", analysis.totals.medium, "orange")}
+          ${printMetric("Low", analysis.totals.low, "green")}
+          ${printMetric("Finding", analysis.findings.length, "blue")}
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>메타 정보</h2>
+        <div class="metaGrid">
+          ${printCard("Analysis ID", analysis.id)}
+          ${printCard("Repository", repository)}
+          ${printCard("Created", createdAt)}
+          ${printCard("분석 문서", `${analysis.documents.length}개`)}
+          ${printCard("단계 로그", `${analysis.steps.filter((step) => step.status === "completed").length}/${analysis.steps.length} 완료`)}
+          ${printCard("DB 저장", "Supabase 조회 데이터")}
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>업로드 문서</h2>
+        <div class="list">${printDocumentsHtml(analysis)}</div>
+      </section>
+
+      <section class="section">
+        <h2>분석 단계</h2>
+        <div class="list">${printStepsHtml(analysis)}</div>
+      </section>
+
+      <section class="section">
+        <h2>탐지 결과</h2>
+        ${printFindingsHtml(analysis)}
+      </section>
+
+      <section class="section">
+        <h2>권장 다음 조치</h2>
+        <div class="list">
+          <div class="row">분석 요약과 finding 근거를 기준으로 문서 최신성을 검토하세요.</div>
+          <div class="row">finding이 0건이어도 핵심 API 응답 필드와 인증/권한 흐름은 수동으로 한 번 더 확인하세요.</div>
+          <div class="row">히스토리에서 이전 분석을 열어 변경 전후 리포트 차이를 비교하세요.</div>
+        </div>
+      </section>
+
+      <div class="footer">
+        CodeMatch AI 리포트는 AI 기반 의심 항목과 근거를 제공하는 검토 보조 자료입니다. 업로드 원본 파일과 API key는 이 리포트에 포함되지 않습니다.
+      </div>
+    </section>
+  </main>
+</body>
+</html>`;
+}
+
+function printMetric(label: string, value: number, tone: string) {
+  return `<div class="card"><small>${escapeHtml(label)}</small><span class="metricValue ${escapeAttribute(tone)}">${value}</span></div>`;
+}
+
+function printCard(label: string, value: string) {
+  return `<div class="card"><small>${escapeHtml(label)}</small><strong>${escapeHtml(value)}</strong></div>`;
+}
+
+function printDocumentsHtml(analysis: AnalysisDetail) {
+  if (!analysis.documents.length) return `<div class="row">저장된 문서 메타데이터가 없습니다.</div>`;
+
+  return analysis.documents
+    .map(
+      (document) =>
+        `<div class="row"><strong>${escapeHtml(document.name)}</strong>${escapeHtml(formatBytes(document.size))} · ${escapeHtml(document.extractedChars.toLocaleString("ko-KR"))} chars extracted</div>`,
+    )
+    .join("");
+}
+
+function printStepsHtml(analysis: AnalysisDetail) {
+  if (!analysis.steps.length) return `<div class="row">저장된 단계 로그가 없습니다.</div>`;
+
+  return analysis.steps
+    .map((step) => {
+      const duration = step.durationMs ? ` · ${formatDuration(step.durationMs)}` : "";
+      const message = step.message ? ` · ${step.message}` : "";
+      return `<div class="row"><strong>${escapeHtml(step.label)}</strong>${escapeHtml(statusLabel(step.status) + duration + message)}</div>`;
+    })
+    .join("");
+}
+
+function printFindingsHtml(analysis: AnalysisDetail) {
+  if (!analysis.findings.length) {
+    return `<div class="finding low">
+      <div class="findingHead">
+        <h3>중요 불일치가 발견되지 않았습니다</h3>
+        <div class="badges"><span class="badge">0 findings</span></div>
+      </div>
+      <p>저장된 분석 결과 기준으로 기능 누락, API 불일치, outdated 문서 항목이 0건입니다. 최종 검수 전 주요 파일과 테스트는 함께 확인하는 것을 권장합니다.</p>
+    </div>`;
+  }
+
+  return analysis.findings
+    .map((finding, index) => {
+      const severityClass = finding.severity === "high" ? "danger" : finding.severity === "medium" ? "warn" : "";
+      return `<article class="finding ${escapeAttribute(finding.severity)}">
+        <div class="findingHead">
+          <h3>${index + 1}. ${escapeHtml(finding.title)}</h3>
+          <div class="badges">
+            <span class="badge">${escapeHtml(typeLabel(finding.type))}</span>
+            <span class="badge ${severityClass}">${escapeHtml(finding.severity)}</span>
+            <span class="badge">${Math.round(finding.confidence * 100)}%</span>
+          </div>
+        </div>
+        <div class="evidenceGrid">
+          ${printEvidence("문서 근거", finding.documentEvidence)}
+          ${printEvidence("코드 분석 결과", finding.codeEvidence)}
+          ${printEvidence("관련 파일", finding.relatedFiles.length ? finding.relatedFiles.join(", ") : "관련 파일 특정 어려움")}
+          ${printEvidence("권장 조치", finding.recommendation)}
+        </div>
+      </article>`;
+    })
+    .join("");
+}
+
+function printEvidence(label: string, value: string) {
+  return `<div class="evidence"><b>${escapeHtml(label)}</b><p>${escapeHtml(value)}</p></div>`;
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function escapeAttribute(value: string) {
+  return escapeHtml(value).replace(/\s+/g, "-");
 }
 
 function formatDuration(ms: number) {

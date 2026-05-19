@@ -19,7 +19,7 @@ Next.js App Router 영역이다. 화면과 API route가 위치한다.
 
 - `src/app/layout.tsx`: 전체 HTML layout과 metadata를 정의한다.
 - `src/app/globals.css`: 전체 UI 스타일, 반응형 레이아웃, 리포트/히스토리 컴포넌트 스타일을 정의한다.
-- `src/app/page.tsx`: 메인 화면이다. Repository URL 입력, 문서 업로드, AI provider/API key 입력, 분석 진행 상태, 결과 리포트, DB 저장 확인, 분석 히스토리를 렌더링한다.
+- `src/app/page.tsx`: 메인 화면이다. Repository URL 입력, 문서 클릭/드래그앤드롭 업로드, AI provider/API key 입력, 분석 진행 상태, 결과 리포트, PDF/Markdown 리포트 다운로드, DB 저장 확인, 분석 히스토리를 렌더링한다.
 - `src/app/api/analyses/route.ts`: `POST /api/analyses`와 `GET /api/analyses`를 처리한다. 분석 생성, 업로드 문서 수신, 익명 세션별 히스토리 조회를 담당한다.
 - `src/app/api/analyses/[id]/route.ts`: `GET /api/analyses/:id`를 처리한다. Supabase에 저장된 분석 상세, 문서 메타데이터, 단계 로그, finding을 조회한다.
 
@@ -86,7 +86,7 @@ Vitest 단위 테스트다.
 
 ## Data Flow Summary
 
-1. 사용자가 `src/app/page.tsx`에서 Repository URL, 문서, provider/API key를 입력한다.
+1. 사용자가 `src/app/page.tsx`에서 Repository URL, 문서 파일, provider/API key를 입력한다. 문서는 파일 선택 또는 드래그앤드롭으로 추가할 수 있다.
 2. `src/app/api/analyses/route.ts`가 요청을 받아 `Analysis` row와 단계 row를 생성한다.
 3. `src/server/analysis-runner.ts`가 분석 workflow를 실행한다.
 4. `src/server/github.ts`가 GitHub 공개 저장소 코드를 수집한다.
@@ -95,6 +95,7 @@ Vitest 단위 테스트다.
 7. `src/server/analyzer/*`가 OpenAI/Gemini 또는 heuristic fallback으로 리포트를 만든다.
 8. `analysis-runner.ts`가 finding과 summary를 Supabase에 저장한다.
 9. `GET /api/analyses/:id`가 저장된 데이터를 다시 읽어 리포트 UI에 표시한다.
+10. 사용자는 화면에 로드된 리포트를 PDF 저장용 인쇄 화면으로 열거나 Markdown 파일로 로컬에 다운로드할 수 있다.
 
 ## Storage Summary
 

@@ -217,6 +217,23 @@ h2 {
   box-shadow: 0 0 0 4px rgba(14, 91, 255, 0.12);
 }
 
+.uploadDropZone {
+  padding: 10px;
+  border: 1px dashed #cbd8eb;
+  border-radius: 8px;
+  background: #fbfdff;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.uploadDropZone.dragActive {
+  border-color: var(--blue);
+  background: #f1f6ff;
+  box-shadow: 0 0 0 4px rgba(14, 91, 255, 0.12);
+}
+
 .fileGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
@@ -278,6 +295,18 @@ h2 {
   color: #465572;
   font-weight: 800;
   cursor: pointer;
+}
+
+.uploadBox span {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+}
+
+.uploadBox small {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .hiddenInput {
@@ -474,6 +503,13 @@ h2 {
 .sectionHeader p {
   margin: 6px 0 0;
   line-height: 1.5;
+}
+
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .ghostButton {

@@ -64,6 +64,7 @@ CodeMatch AI는 개발 문서와 GitHub 공개 저장소의 실제 코드 간 �
 - Windows/Linux 기준 로컬 서버 실행 및 종료 방법 문서화 완료.
 - 분석 결과와 히스토리는 Supabase 저장 데이터를 다시 조회해 화면에 표시한다.
 - finding 유무와 상관없이 분석 리포트 본문을 항상 표시한다.
+- 화면에 표시된 분석 리포트를 PDF 저장용 리포트 화면 또는 Markdown 파일로 로컬 다운로드할 수 있다.
 - API key 미입력 시 heuristic fallback 동작.
 - 다음 단계는 실제 OpenAI/Gemini API key를 사용한 품질 검증과 Cloud Run 배포다.
 
