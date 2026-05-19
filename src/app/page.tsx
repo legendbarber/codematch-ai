@@ -4,9 +4,11 @@ import {
   AlertTriangle,
   Check,
   ChevronDown,
+  ClipboardList,
   Clock3,
   Code2,
   Database,
+  Download,
   ExternalLink,
   FileText,
   Flag,
@@ -77,6 +79,11 @@ type AnalysisDetail = AnalysisSummary & {
     recommendation: string;
     confidence: number;
   }>;
+  reportRecommendationSummary: {
+    headline: string;
+    priorityActions: string[];
+    reviewFocus: string[];
+  };
 };
 
 const DEFAULT_STEPS = [
@@ -193,6 +200,18 @@ export default function Home() {
 
   function removeFile(fileName: string) {
     setFiles((current) => current.filter((file) => file.name !== fileName));
+  }
+
+  function downloadMarkdownReport() {
+    if (!active) return;
+    const markdown = buildMarkdownReport(active);
+    const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `codematch-report-${active.id}.md`;
+    anchor.click();
+    URL.revokeObjectURL(url);
   }
 
   function scrollToReport() {
@@ -376,10 +395,16 @@ export default function Home() {
             <p>{active?.summary ?? "분석을 실행하면 리포트 요약과 상세 항목이 표시됩니다."}</p>
           </div>
           {active ? (
-            <button className="ghostButton" onClick={() => void loadAnalysis(active.id)}>
-              <RefreshCw size={16} />
-              새로고침
-            </button>
+            <div className="reportActions">
+              <button className="ghostButton" onClick={() => void loadAnalysis(active.id)}>
+                <RefreshCw size={16} />
+                새로고침
+              </button>
+              <button className="ghostButton" onClick={downloadMarkdownReport}>
+                <Download size={16} />
+                Markdown
+              </button>
+            </div>
           ) : null}
         </div>
 
@@ -548,6 +573,10 @@ function AnalysisReport({ analysis }: { analysis: AnalysisDetail }) {
       </section>
 
       <section className="reportBlock">
+        <ReportActionSummary analysis={analysis} />
+      </section>
+
+      <section className="reportBlock">
         <h4>권장 다음 조치</h4>
         <div className="actionList">
           <span>분석 요약과 finding 근거를 기준으로 문서 최신성을 검토하세요.</span>
@@ -556,6 +585,39 @@ function AnalysisReport({ analysis }: { analysis: AnalysisDetail }) {
         </div>
       </section>
     </article>
+  );
+}
+
+function ReportActionSummary({ analysis }: { analysis: AnalysisDetail }) {
+  const summary = analysis.reportRecommendationSummary;
+  return (
+    <div className="actionSummary">
+      <div className="actionSummaryTitle">
+        <ClipboardList size={20} />
+        <div>
+          <h4>AI 기반 수정 권장 요약</h4>
+          <p>{summary.headline}</p>
+        </div>
+      </div>
+      <div className="actionSummaryGrid">
+        <div>
+          <strong>우선 조치</strong>
+          <ol>
+            {summary.priorityActions.map((action) => (
+              <li key={action}>{action}</li>
+            ))}
+          </ol>
+        </div>
+        <div>
+          <strong>검토 포커스</strong>
+          <div className="focusTags">
+            {summary.reviewFocus.map((focus) => (
+              <span key={focus}>{focus}</span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -719,4 +781,54 @@ function formatBytes(size: number) {
 function formatDuration(ms: number) {
   const seconds = Math.max(1, Math.round(ms / 1000));
   return `00:${String(seconds).padStart(2, "0")}`;
+}
+
+function buildMarkdownReport(analysis: AnalysisDetail) {
+  const repository =
+    analysis.repoOwner && analysis.repoName ? `${analysis.repoOwner}/${analysis.repoName}` : analysis.repoUrl;
+  const lines = [
+    "# CodeMatch AI Report",
+    "",
+    `- Repository: ${repository}`,
+    `- Provider: ${analysis.provider.toUpperCase()}`,
+    `- Status: ${statusLabel(analysis.status)}`,
+    `- Completed At: ${analysis.completedAt ? new Date(analysis.completedAt).toLocaleString("ko-KR") : "-"}`,
+    `- Documents: ${analysis.documents.length}`,
+    `- Findings: ${analysis.findings.length}`,
+    "",
+    "## Summary",
+    "",
+    analysis.summary ?? "분석 요약이 없습니다.",
+    "",
+    "## Recommendation Summary",
+    "",
+    analysis.reportRecommendationSummary.headline,
+    "",
+    ...analysis.reportRecommendationSummary.priorityActions.map((action) => `- ${action}`),
+    "",
+    "## Uploaded Documents",
+    "",
+    ...analysis.documents.map(
+      (document) =>
+        `- ${document.name} (${formatBytes(document.size)}, ${document.extractedChars.toLocaleString("ko-KR")} chars)`,
+    ),
+    "",
+    "## Findings",
+    "",
+    ...(analysis.findings.length
+      ? analysis.findings.flatMap((finding, index) => [
+          `### ${index + 1}. ${finding.title}`,
+          "",
+          `- Type: ${typeLabel(finding.type)}`,
+          `- Severity: ${finding.severity}`,
+          `- Confidence: ${Math.round(finding.confidence * 100)}%`,
+          `- Related Files: ${finding.relatedFiles.length ? finding.relatedFiles.join(", ") : "-"}`,
+          `- Document Evidence: ${finding.documentEvidence}`,
+          `- Code Evidence: ${finding.codeEvidence}`,
+          `- Recommendation: ${finding.recommendation}`,
+          "",
+        ])
+      : ["중요 불일치 항목이 발견되지 않았습니다.", ""]),
+  ];
+  return `${lines.join("\n")}\n`;
 }

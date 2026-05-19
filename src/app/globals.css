@@ -481,6 +481,13 @@ h2 {
   padding: 0 12px;
 }
 
+.reportActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .metricGrid {
   display: grid;
   grid-template-columns: repeat(7, minmax(120px, 1fr));
@@ -719,6 +726,62 @@ h2 {
 .actionList {
   display: grid;
   gap: 8px;
+}
+
+.actionSummary {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid #d7e3ff;
+  border-radius: 8px;
+  background: #f8fbff;
+}
+
+.actionSummaryTitle {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.actionSummaryTitle svg {
+  color: var(--blue);
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.actionSummaryTitle h4 {
+  margin-bottom: 6px;
+}
+
+.actionSummaryGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(180px, 0.8fr);
+  gap: 14px;
+}
+
+.actionSummaryGrid ol {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  color: #34405b;
+  line-height: 1.6;
+  font-weight: 700;
+}
+
+.focusTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.focusTags span {
+  padding: 8px 10px;
+  border: 1px solid #dce5f4;
+  border-radius: 999px;
+  color: #17407e;
+  background: white;
+  font-size: 13px;
+  font-weight: 900;
 }
 
 .scopeList span,
@@ -1051,6 +1114,7 @@ h2 {
   }
 
   .controlsRow,
+  .actionSummaryGrid,
   .findingBody,
   .recommendations {
     grid-template-columns: 1fr;
