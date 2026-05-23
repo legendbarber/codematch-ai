@@ -70,3 +70,7 @@ Open <http://localhost:3000>.
 - [Codebase Map](./docs/codebase-map.md)
 - [DB Verification Guide](./docs/db-verification.md)
 - [Google Cloud Deployment Notes](./docs/deployment-gcp.md)
+
+## Sample Fixtures
+
+- [TeamFlow RetailOps](./sample-fixtures/teamflow-retailops): sample technical documents and matching/incomplete code repositories for CodeMatch validation.
