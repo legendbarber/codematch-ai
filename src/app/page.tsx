@@ -282,16 +282,14 @@ export default function Home() {
     setFiles((current) => current.filter((file) => fileKey(file) !== key));
   }
 
-  function downloadMarkdownReport() {
+  function handleDownloadMarkdownReport() {
     if (!active) return;
-    const markdown = buildMarkdownReport(active);
-    const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `codematch-report-${active.id}.md`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    downloadMarkdownReport(active);
+  }
+
+  function handlePrintPdfReport() {
+    if (!active) return;
+    printPdfReport(active);
   }
 
   function scrollToReport() {
@@ -491,7 +489,11 @@ export default function Home() {
                 <RefreshCw size={16} />
                 새로고침
               </button>
-              <button className="ghostButton" onClick={downloadMarkdownReport}>
+              <button className="ghostButton" onClick={handlePrintPdfReport}>
+                <Printer size={16} />
+                PDF 저장
+              </button>
+              <button className="ghostButton" onClick={handleDownloadMarkdownReport}>
                 <Download size={16} />
                 Markdown
               </button>
