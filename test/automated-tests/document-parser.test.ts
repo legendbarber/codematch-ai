@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chunkDocument, parseUploadedDocument } from "../src/server/document-parser";
+import { chunkDocument, parseUploadedDocument } from "@/server/document-parser";
 
 describe("parseUploadedDocument", () => {
   it("normalizes text files and creates document chunks", async () => {

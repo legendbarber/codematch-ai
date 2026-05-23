@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { heuristicAnalyze } from "../src/server/analyzer/heuristic";
+import { heuristicAnalyze } from "@/server/analyzer/heuristic";
 
 describe("heuristicAnalyze", () => {
   it("detects documented endpoint missing from code", () => {

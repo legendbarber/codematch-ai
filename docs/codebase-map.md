@@ -23,14 +23,15 @@ Database schema files.
 
 - `prisma/schema.prisma`: Prisma schema for `Analysis`, `UploadedDocument`, `AnalysisStep`, and `Finding`.
 
-### `sample-fixtures`
+### `test`
 
-Sample input data for validating CodeMatch behavior. These files are not used
-by the production app at runtime.
+Test-related material, separated by purpose.
 
-- `sample-fixtures/teamflow-retailops/docs`: matching and intentionally mismatched technical documents.
-- `sample-fixtures/teamflow-retailops/repos/implemented`: sample code intended to align with the TeamFlow RetailOps specification.
-- `sample-fixtures/teamflow-retailops/repos/incomplete`: sample code with intentionally missing or mismatched features.
+- `test/automated-tests`: Vitest tests for the production application code.
+- `test/sample-inputs`: sample input data for validating CodeMatch behavior. These files are not used by the production app at runtime.
+- `test/sample-inputs/teamflow-retailops/docs`: matching and intentionally mismatched technical documents.
+- `test/sample-inputs/teamflow-retailops/repos/implemented`: sample code intended to align with the TeamFlow RetailOps specification.
+- `test/sample-inputs/teamflow-retailops/repos/incomplete`: sample code with intentionally missing or mismatched features.
 
 ### `scripts`
 
@@ -48,15 +49,15 @@ Application source code.
 - `src/server`: server-side business logic for repository collection, document parsing, analysis orchestration, report serialization, sessions, and validation.
 - `src/server/analyzer`: OpenAI, Gemini, schema, prompt, and heuristic fallback analyzer modules.
 
-### `tests`
+### `test/automated-tests`
 
 Vitest unit tests for the production application code.
 
-- `tests/github.test.ts`: GitHub URL parsing behavior.
-- `tests/chunker.test.ts`: code chunking and endpoint signal extraction.
-- `tests/document-parser.test.ts`: uploaded document parsing behavior.
-- `tests/heuristic.test.ts`: local fallback analysis behavior.
-- `tests/report-summary.test.ts`: report recommendation summary generation.
+- `test/automated-tests/github.test.ts`: GitHub URL parsing behavior.
+- `test/automated-tests/chunker.test.ts`: code chunking and endpoint signal extraction.
+- `test/automated-tests/document-parser.test.ts`: uploaded document parsing behavior.
+- `test/automated-tests/heuristic.test.ts`: local fallback analysis behavior.
+- `test/automated-tests/report-summary.test.ts`: report recommendation summary generation.
 
 ## Root Files
 

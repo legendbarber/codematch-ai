@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseGithubRepoUrl } from "../src/server/github";
+import { parseGithubRepoUrl } from "@/server/github";
 
 describe("parseGithubRepoUrl", () => {
   it("parses normal github urls", () => {

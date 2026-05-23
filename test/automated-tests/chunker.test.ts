@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chunkSourceFiles, extractEndpointSignals } from "../src/server/chunker";
+import { chunkSourceFiles, extractEndpointSignals } from "@/server/chunker";
 
 describe("chunkSourceFiles", () => {
   it("keeps short files as a single chunk", () => {

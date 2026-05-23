@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createReportRecommendationSummary } from "../src/server/report-summary";
+import { createReportRecommendationSummary } from "@/server/report-summary";
 
 describe("createReportRecommendationSummary", () => {
   it("returns default review actions when there are no findings", () => {

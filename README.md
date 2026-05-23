@@ -71,6 +71,7 @@ Open <http://localhost:3000>.
 - [DB Verification Guide](./docs/db-verification.md)
 - [Google Cloud Deployment Notes](./docs/deployment-gcp.md)
 
-## Sample Fixtures
+## Test Materials
 
-- [TeamFlow RetailOps](./sample-fixtures/teamflow-retailops): sample technical documents and matching/incomplete code repositories for CodeMatch validation.
+- [Automated Tests](./test/automated-tests): Vitest tests for the CodeMatch app.
+- [Sample Inputs](./test/sample-inputs/teamflow-retailops): sample technical documents and matching/incomplete code repositories for CodeMatch validation.
