@@ -1,11 +1,20 @@
 import { analyzeRepository } from "./analyzer";
+import {
+  artifactExpiresAt,
+  artifactStorageEnabled,
+  sanitizeFileName,
+  saveArtifactBuffer,
+} from "./artifact-storage";
 import { chunkSourceFiles } from "./chunker";
 import { collectRepository, parseGithubRepoUrl } from "./github";
 import { parseUploadedDocuments } from "./document-parser";
 import { prisma } from "./db";
+import { createHighlightedPdf, locateFindingInPdf } from "./pdf-evidence";
 import type {
   AnalysisOptions,
   AnalysisStatus,
+  ComparisonBasis,
+  DocumentEvidenceLocation,
   ParsedDocument,
   Provider,
   ReportFinding,
@@ -23,6 +32,7 @@ export const ANALYSIS_STEPS = [
 type RunAnalysisInput = {
   repoUrl: string;
   provider: Provider;
+  comparisonBasis: ComparisonBasis;
   apiKey?: string;
   options: AnalysisOptions;
   documents: UploadedDocumentInput[];
@@ -68,6 +78,7 @@ export async function runAnalysis(analysisId: string, input: RunAnalysisInput) {
       analyzeRepository({
         provider: input.provider,
         apiKey: input.apiKey,
+        comparisonBasis: input.comparisonBasis,
         options: input.options,
         repository,
         documents: parsedDocuments,
@@ -77,15 +88,31 @@ export async function runAnalysis(analysisId: string, input: RunAnalysisInput) {
 
     await updateStatus(analysisId, "reporting");
     await runStep(analysisId, "report", async () => {
+      const findings = await enrichFindingsWithArtifacts(analysisId, {
+        comparisonBasis: input.comparisonBasis,
+        findings: report.findings,
+        parsedDocuments,
+        uploadedDocuments: input.documents,
+      });
+      const scope = {
+        collectedCodeFileCount: repository.files.length,
+        codeChunkCount: chunks.length,
+        documentChunkCount: parsedDocuments.reduce((sum, document) => sum + document.chunks.length, 0),
+        warnings: repository.warnings,
+        githubTreeTruncated: repository.warnings.some((warning) => warning.includes("tree 응답")),
+        highlightMappingFailures: findings.filter(
+          (finding) => finding.documentLocation?.highlightStatus === "mapping_failed",
+        ).length,
+      };
       await prisma.finding.deleteMany({ where: { analysisId } });
       await prisma.finding.createMany({
-        data: report.findings.map((finding) => toFindingRow(analysisId, finding)),
+        data: findings.map((finding) => toFindingRow(analysisId, finding)),
       });
       await prisma.analysis.update({
         where: { id: analysisId },
         data: {
           summary: report.summary,
-          totalsJson: JSON.stringify(computeTotals(report.findings)),
+          totalsJson: JSON.stringify({ ...computeTotals(findings), scope }),
           status: "completed",
           completedAt: new Date(),
         },
@@ -166,9 +193,142 @@ function toFindingRow(analysisId: string, finding: ReportFinding) {
     documentEvidence: finding.documentEvidence,
     codeEvidence: finding.codeEvidence,
     relatedFilesJson: JSON.stringify(finding.relatedFiles),
+    documentLocationJson: JSON.stringify(finding.documentLocation ?? {}),
+    codeLocationsJson: JSON.stringify(finding.codeLocations ?? []),
     recommendation: finding.recommendation,
     confidence: finding.confidence,
   };
+}
+
+type ArtifactEnrichmentInput = {
+  comparisonBasis: ComparisonBasis;
+  findings: ReportFinding[];
+  parsedDocuments: ParsedDocument[];
+  uploadedDocuments: UploadedDocumentInput[];
+};
+
+async function enrichFindingsWithArtifacts(
+  analysisId: string,
+  input: ArtifactEnrichmentInput,
+): Promise<ReportFinding[]> {
+  if (input.comparisonBasis !== "document_latest") {
+    return input.findings;
+  }
+
+  const pdfUploads = input.uploadedDocuments.filter((document) => {
+    const name = document.name.toLowerCase();
+    return document.mimeType === "application/pdf" || name.endsWith(".pdf");
+  });
+  if (!pdfUploads.length) return input.findings;
+
+  const enriched: ReportFinding[] = [];
+  const highlightable: Array<{ finding: ReportFinding; location: DocumentEvidenceLocation }> = [];
+  for (const finding of input.findings) {
+    if (finding.type !== "missing_feature" && finding.type !== "api_mismatch") {
+      enriched.push(finding);
+      continue;
+    }
+
+    const location = locateFindingInPdf(finding, input.parsedDocuments);
+    if (!location?.boundingBoxes?.length) {
+      enriched.push({
+        ...finding,
+        documentLocation: {
+          ...(location ?? finding.documentLocation ?? {
+            documentName: input.parsedDocuments[0]?.name ?? "uploaded document",
+          }),
+          highlightStatus: "mapping_failed",
+          highlightMessage:
+            "이 PDF에서는 텍스트 위치를 정확히 확인할 수 없어 하이라이트 파일을 생성하지 못했습니다. 텍스트 근거는 아래 리포트에서 확인할 수 있습니다.",
+        },
+      });
+      continue;
+    }
+
+    highlightable.push({ finding, location });
+  }
+
+  if (!highlightable.length) {
+    return enriched;
+  }
+
+  if (!artifactStorageEnabled()) {
+    return [
+      ...enriched,
+      ...highlightable.map(({ finding, location }) => ({
+        ...finding,
+        documentLocation: {
+          ...location,
+          highlightStatus: "storage_unavailable",
+          highlightMessage: "현재 서버 설정에서 하이라이트 PDF artifact 저장소가 비활성화되어 있습니다.",
+        } satisfies DocumentEvidenceLocation,
+      })),
+    ];
+  }
+
+  const artifactIdsByDocument = await createCombinedHighlightArtifacts(analysisId, pdfUploads, highlightable);
+  return [
+    ...enriched,
+    ...highlightable.map(({ finding, location }) => {
+      const artifactId = artifactIdsByDocument.get(location.documentName);
+      if (!artifactId) {
+        return {
+          ...finding,
+          documentLocation: {
+            ...location,
+            highlightStatus: "mapping_failed",
+            highlightMessage: "하이라이트 PDF 통합 artifact 생성에 실패했습니다.",
+          } satisfies DocumentEvidenceLocation,
+        };
+      }
+      return {
+        ...finding,
+        documentLocation: {
+          ...location,
+          highlightStatus: "created",
+          artifactId,
+          highlightMessage: "업로드된 원본 PDF 복사본 하나에 이 분석의 문서 근거 위치를 모두 노란색으로 표시했습니다.",
+        } satisfies DocumentEvidenceLocation,
+      };
+    }),
+  ];
+}
+
+async function createCombinedHighlightArtifacts(
+  analysisId: string,
+  pdfUploads: UploadedDocumentInput[],
+  highlightable: Array<{ finding: ReportFinding; location: DocumentEvidenceLocation }>,
+) {
+  const artifactIdsByDocument = new Map<string, string>();
+  const locationsByDocument = new Map<string, DocumentEvidenceLocation[]>();
+  for (const { location } of highlightable) {
+    locationsByDocument.set(location.documentName, [...(locationsByDocument.get(location.documentName) ?? []), location]);
+  }
+
+  for (const [documentName, locations] of locationsByDocument) {
+    const source = pdfUploads.find((document) => document.name === documentName) ?? pdfUploads[0];
+    try {
+      const pdfBuffer = await createHighlightedPdf(source.buffer, locations);
+      const fileName = `${sanitizeFileName(source.name.replace(/\.pdf$/i, ""))}-highlighted-all.pdf`;
+      const stored = await saveArtifactBuffer(fileName, pdfBuffer);
+      const artifact = await prisma.generatedArtifact.create({
+        data: {
+          analysisId,
+          type: "highlighted_source_pdf_combined",
+          fileName,
+          mimeType: "application/pdf",
+          storageKey: stored.storageKey,
+          size: stored.size,
+          expiresAt: artifactExpiresAt(),
+        },
+      });
+      artifactIdsByDocument.set(documentName, artifact.id);
+    } catch {
+      // Individual findings keep a mapping failure message when no combined artifact id is available.
+    }
+  }
+
+  return artifactIdsByDocument;
 }
 
 function computeTotals(findings: ReportFinding[]) {

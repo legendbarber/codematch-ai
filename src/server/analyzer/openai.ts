@@ -1,11 +1,18 @@
 import { buildAnalysisPrompt } from "./prompt";
 import { parseReport, reportJsonSchema } from "./schema";
-import type { AnalysisReport, CodeChunk, ParsedDocument, RepositorySnapshot } from "../types";
+import type {
+  AnalysisReport,
+  CodeChunk,
+  ComparisonBasis,
+  ParsedDocument,
+  RepositorySnapshot,
+} from "../types";
 
 type AnalyzeInput = {
   repository: RepositorySnapshot;
   documents: ParsedDocument[];
   chunks: CodeChunk[];
+  comparisonBasis: ComparisonBasis;
   apiKey?: string;
 };
 

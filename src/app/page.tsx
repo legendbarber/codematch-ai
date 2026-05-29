@@ -4,9 +4,11 @@ import {
   AlertTriangle,
   Check,
   ChevronDown,
+  CircleAlert,
   ClipboardList,
   Clock3,
   Code2,
+  Copy,
   Database,
   Download,
   ExternalLink,
@@ -36,6 +38,7 @@ import {
 } from "react";
 
 type Provider = "openai" | "gemini";
+type ComparisonBasis = "document_latest" | "code_latest" | "unknown";
 
 type Totals = {
   total: number;
@@ -45,6 +48,14 @@ type Totals = {
   high: number;
   medium: number;
   low: number;
+  scope?: {
+    collectedCodeFileCount: number;
+    codeChunkCount: number;
+    documentChunkCount: number;
+    warnings: string[];
+    githubTreeTruncated: boolean;
+    highlightMappingFailures: number;
+  };
 };
 
 type AnalysisSummary = {
@@ -53,12 +64,32 @@ type AnalysisSummary = {
   repoOwner: string | null;
   repoName: string | null;
   provider: Provider;
+  comparisonBasis: ComparisonBasis;
   status: string;
   summary: string | null;
   error: string | null;
   totals: Totals;
   createdAt: string;
   completedAt: string | null;
+};
+
+type CodeLocation = {
+  path: string;
+  symbolName?: string;
+  startLine?: number;
+  endLine?: number;
+  endpoint?: {
+    method: string;
+    path: string;
+  };
+};
+
+type DocumentationDraft = {
+  suggestedSection: string;
+  suggestedTitle: string;
+  body: string;
+  supportingCodeLocations: CodeLocation[];
+  reviewNotes?: string[];
 };
 
 type AnalysisDetail = AnalysisSummary & {
@@ -85,8 +116,32 @@ type AnalysisDetail = AnalysisSummary & {
     documentEvidence: string;
     codeEvidence: string;
     relatedFiles: string[];
+    documentLocation: {
+      documentName?: string;
+      pageNumber?: number;
+      matchedText?: string;
+      highlightStatus?: "created" | "not_applicable" | "mapping_failed" | "storage_unavailable";
+      highlightMessage?: string;
+      artifactId?: string;
+    };
+    codeLocations: CodeLocation[];
     recommendation: string;
     confidence: number;
+  }>;
+  artifacts: Array<{
+    id: string;
+    type: string;
+    fileName: string;
+    mimeType: string;
+    size: number;
+    expiresAt: string | null;
+    createdAt: string;
+  }>;
+  documentationDrafts: Array<{
+    id: string;
+    findingId: string;
+    draft: DocumentationDraft;
+    createdAt: string;
   }>;
   reportRecommendationSummary: {
     headline: string;
@@ -106,10 +161,34 @@ const DEFAULT_STEPS = [
 const ACCEPTED_DOCUMENT_EXTENSIONS = [".md", ".markdown", ".txt", ".pdf", ".json", ".yaml", ".yml"];
 const MAX_DOCUMENTS = 5;
 
+const OPTION_PRESETS: Record<ComparisonBasis, { missingFeature: boolean; apiMismatch: boolean; outdatedDoc: boolean }> = {
+  document_latest: {
+    missingFeature: true,
+    apiMismatch: true,
+    outdatedDoc: false,
+  },
+  code_latest: {
+    missingFeature: false,
+    apiMismatch: false,
+    outdatedDoc: true,
+  },
+  unknown: {
+    missingFeature: true,
+    apiMismatch: true,
+    outdatedDoc: true,
+  },
+};
+
 export default function Home() {
   const [repoUrl, setRepoUrl] = useState("");
   const [provider, setProvider] = useState<Provider>("openai");
+  const [comparisonBasis, setComparisonBasis] = useState<ComparisonBasis>("unknown");
   const [apiKey, setApiKey] = useState("");
+  const [draftApiKey, setDraftApiKey] = useState("");
+  const [drafts, setDrafts] = useState<Record<string, DocumentationDraft>>({});
+  const [draftLoading, setDraftLoading] = useState<Record<string, boolean>>({});
+  const [draftErrors, setDraftErrors] = useState<Record<string, string>>({});
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [options, setOptions] = useState({
@@ -152,6 +231,11 @@ export default function Home() {
     }));
   }, [active?.steps, submitting]);
 
+  function handleComparisonBasisChange(nextBasis: ComparisonBasis) {
+    setComparisonBasis(nextBasis);
+    setOptions(OPTION_PRESETS[nextBasis]);
+  }
+
   async function loadHistory() {
     const response = await fetch("/api/analyses", { cache: "no-store" });
     const payload = await response.json();
@@ -164,7 +248,18 @@ export default function Home() {
     const response = await fetch(`/api/analyses/${id}`, { cache: "no-store" });
     const payload = await response.json();
     if (response.ok) {
-      setActive(payload.analysis);
+      const nextAnalysis = payload.analysis as AnalysisDetail;
+      setActive(nextAnalysis);
+      if (nextAnalysis.documentationDrafts?.length) {
+        setDrafts((current) => ({
+          ...current,
+          ...Object.fromEntries(
+            nextAnalysis.documentationDrafts
+              .filter((draft) => Boolean(draft.draft))
+              .map((draft) => [draft.findingId, draft.draft]),
+          ),
+        }));
+      }
     }
   }
 
@@ -181,6 +276,7 @@ export default function Home() {
     const formData = new FormData();
     formData.set("repoUrl", repoUrl);
     formData.set("provider", provider);
+    formData.set("comparisonBasis", comparisonBasis);
     formData.set("apiKey", apiKey);
     formData.set("missingFeature", String(options.missingFeature));
     formData.set("apiMismatch", String(options.apiMismatch));
@@ -292,6 +388,31 @@ export default function Home() {
     printPdfReport(active);
   }
 
+  async function handleGenerateDraft(findingId: string) {
+    if (!active) return;
+    setDraftLoading((current) => ({ ...current, [findingId]: true }));
+    setDraftErrors((current) => ({ ...current, [findingId]: "" }));
+    try {
+      const response = await fetch(`/api/analyses/${active.id}/findings/${findingId}/documentation-draft`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: draftApiKey }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error ?? "문서 초안을 생성하지 못했습니다.");
+      }
+      setDrafts((current) => ({ ...current, [findingId]: payload.draft }));
+    } catch (draftError) {
+      setDraftErrors((current) => ({
+        ...current,
+        [findingId]: draftError instanceof Error ? draftError.message : String(draftError),
+      }));
+    } finally {
+      setDraftLoading((current) => ({ ...current, [findingId]: false }));
+    }
+  }
+
   function scrollToReport() {
     window.setTimeout(() => {
       document.getElementById("report")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -381,6 +502,74 @@ export default function Home() {
             />
           </div>
 
+          <fieldset className="basisGroup">
+            <legend>분석 기준 선택</legend>
+            <label>
+              <span className="basisHelp" tabIndex={0} aria-label="문서 기준 분석 설명">
+                <CircleAlert size={18} />
+                <span className="basisTooltip" role="tooltip">
+                  요구사항 문서, 기획서, API 명세가 최신이고 개발 코드가 그 내용을 따라왔는지 확인할 때 사용합니다. 문서에 있는 요구사항을 수집된 코드 범위에서 확인하지 못하면 코드 반영 누락 후보로 표시하고, PDF 근거 위치를 하이라이트합니다.
+                </span>
+              </span>
+              <input
+                type="radio"
+                name="comparisonBasis"
+                value="document_latest"
+                checked={comparisonBasis === "document_latest"}
+                onChange={() => handleComparisonBasisChange("document_latest")}
+              />
+              <span>
+                <strong>문서 기준으로 코드 누락 찾기</strong>
+                <small>최신 문서 요구사항이 코드에 반영됐는지 확인합니다.</small>
+              </span>
+            </label>
+            <label>
+              <span className="basisHelp" tabIndex={0} aria-label="코드 기준 분석 설명">
+                <CircleAlert size={18} />
+                <span className="basisTooltip" role="tooltip">
+                  실제 GitHub 코드가 최신이고 문서가 뒤처졌을 가능성이 있을 때 사용합니다. 코드에 구현된 기능, 함수, API endpoint를 기준으로 업로드 문서에 빠진 설명을 찾고, 각 항목에서 Gemini 문서 추가 초안을 만들 수 있습니다.
+                </span>
+              </span>
+              <input
+                type="radio"
+                name="comparisonBasis"
+                value="code_latest"
+                checked={comparisonBasis === "code_latest"}
+                onChange={() => handleComparisonBasisChange("code_latest")}
+              />
+              <span>
+                <strong>코드 기준으로 문서 누락 찾기</strong>
+                <small>최신 코드 기능이 문서에 설명됐는지 확인합니다.</small>
+              </span>
+            </label>
+            <label>
+              <span className="basisHelp" tabIndex={0} aria-label="기준 모름 분석 설명">
+                <CircleAlert size={18} />
+                <span className="basisTooltip" role="tooltip">
+                  문서와 코드 중 어느 쪽이 최신인지 아직 모를 때 사용합니다. 수정 방향을 단정하지 않고 기능 누락, API 불일치, 오래된 문서 가능성을 후보로 넓게 탐지한 뒤 사람이 기준본을 결정하도록 돕습니다.
+                </span>
+              </span>
+              <input
+                type="radio"
+                name="comparisonBasis"
+                value="unknown"
+                checked={comparisonBasis === "unknown"}
+                onChange={() => handleComparisonBasisChange("unknown")}
+              />
+              <span>
+                <strong>먼저 차이 후보만 넓게 보기</strong>
+                <small>최신 기준을 정하지 않고 불일치 후보를 탐지합니다.</small>
+              </span>
+            </label>
+          </fieldset>
+
+          <div className="secretNotice">
+            <FileText size={18} />
+            <span>
+              문서 기준 모드에서 텍스트 레이어가 있는 PDF를 업로드하면, 매핑 가능한 문장 위치에 한해 원본 PDF 복사본에 노란색 하이라이트 artifact를 생성합니다.
+            </span>
+          </div>
+
           <div className="controlsRow">
             <label className="field compact">
               <span>AI Provider</span>
@@ -414,39 +603,55 @@ export default function Home() {
             <span>입력한 API key는 분석 요청 1회에만 사용되며 DB에 저장하지 않습니다. 비워두면 서버 환경변수 또는 휴리스틱 fallback을 사용합니다.</span>
           </div>
 
-          <div className="checksRow">
-            <div className="checks">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={options.missingFeature}
-                  onChange={(event) =>
-                    setOptions((current) => ({ ...current, missingFeature: event.target.checked }))
-                  }
-                />
-                기능 누락
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={options.apiMismatch}
-                  onChange={(event) =>
-                    setOptions((current) => ({ ...current, apiMismatch: event.target.checked }))
-                  }
-                />
-                API 불일치
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={options.outdatedDoc}
-                  onChange={(event) =>
-                    setOptions((current) => ({ ...current, outdatedDoc: event.target.checked }))
-                  }
-                />
-                Outdated 문서
-              </label>
-            </div>
+          <div className="advancedOptions">
+            <button
+              type="button"
+              className="advancedToggle"
+              onClick={() => setShowAdvancedOptions((value) => !value)}
+            >
+              <span>
+                <strong>탐지 유형</strong>
+                <small>{selectedOptionSummary(options)} · 분석 기준에 맞춰 자동 선택됨</small>
+              </span>
+              <ChevronDown size={18} className={showAdvancedOptions ? "open" : ""} />
+            </button>
+            {showAdvancedOptions ? (
+              <div className="checksRow">
+                <p>일반적으로는 바꾸지 않아도 됩니다. 특정 finding 유형만 제외하고 싶을 때 사용하세요.</p>
+                <div className="checks">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={options.missingFeature}
+                      onChange={(event) =>
+                        setOptions((current) => ({ ...current, missingFeature: event.target.checked }))
+                      }
+                    />
+                    기능 누락
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={options.apiMismatch}
+                      onChange={(event) =>
+                        setOptions((current) => ({ ...current, apiMismatch: event.target.checked }))
+                      }
+                    />
+                    API 불일치
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={options.outdatedDoc}
+                      onChange={(event) =>
+                        setOptions((current) => ({ ...current, outdatedDoc: event.target.checked }))
+                      }
+                    />
+                    Outdated 문서
+                  </label>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           {error ? <div className="errorBox">{error}</div> : null}
@@ -493,6 +698,16 @@ export default function Home() {
                 <Printer size={16} />
                 PDF 저장
               </button>
+              {combinedHighlightArtifacts(active).map((artifact, index) => (
+                <a
+                  className="ghostButton"
+                  href={`/api/analyses/${active.id}/artifacts/${artifact.id}/download`}
+                  key={artifact.id}
+                >
+                  <Download size={16} />
+                  {index === 0 ? "하이라이트 문서 다운" : artifact.fileName}
+                </a>
+              ))}
               <button className="ghostButton" onClick={handleDownloadMarkdownReport}>
                 <Download size={16} />
                 Markdown
@@ -522,7 +737,15 @@ export default function Home() {
                 <span>{active.error}</span>
               </div>
             ) : active ? (
-              <AnalysisReport analysis={active} />
+              <AnalysisReport
+                analysis={active}
+                drafts={drafts}
+                draftApiKey={draftApiKey}
+                draftErrors={draftErrors}
+                draftLoading={draftLoading}
+                onDraftApiKeyChange={setDraftApiKey}
+                onGenerateDraft={handleGenerateDraft}
+              />
             ) : (
               <div className="emptyState">
                 <SearchCheck size={28} />
@@ -574,7 +797,7 @@ export default function Home() {
               <span>
                 <strong>{item.repoOwner && item.repoName ? `${item.repoOwner}/${item.repoName}` : item.repoUrl}</strong>
                 <small>
-                  {item.provider.toUpperCase()} · {new Date(item.createdAt).toLocaleString("ko-KR")}
+                  {item.provider.toUpperCase()} · {basisLabel(item.comparisonBasis)} · {new Date(item.createdAt).toLocaleString("ko-KR")}
                 </small>
               </span>
               <StatusPill status={item.status} />
@@ -586,7 +809,23 @@ export default function Home() {
   );
 }
 
-function AnalysisReport({ analysis }: { analysis: AnalysisDetail }) {
+function AnalysisReport({
+  analysis,
+  drafts,
+  draftApiKey,
+  draftErrors,
+  draftLoading,
+  onDraftApiKeyChange,
+  onGenerateDraft,
+}: {
+  analysis: AnalysisDetail;
+  drafts: Record<string, DocumentationDraft>;
+  draftApiKey: string;
+  draftErrors: Record<string, string>;
+  draftLoading: Record<string, boolean>;
+  onDraftApiKeyChange: (value: string) => void;
+  onGenerateDraft: (findingId: string) => void;
+}) {
   const repository =
     analysis.repoOwner && analysis.repoName ? `${analysis.repoOwner}/${analysis.repoName}` : analysis.repoUrl;
   const completedAt = analysis.completedAt
@@ -608,6 +847,7 @@ function AnalysisReport({ analysis }: { analysis: AnalysisDetail }) {
       <div className="reportMetaGrid">
         <ReportMeta label="Repository" value={repository} />
         <ReportMeta label="Provider" value={analysis.provider.toUpperCase()} />
+        <ReportMeta label="분석 기준" value={basisLabel(analysis.comparisonBasis)} />
         <ReportMeta label="완료 시각" value={completedAt} />
         <ReportMeta label="분석 문서" value={`${analysis.documents.length}개`} />
         <ReportMeta label="단계 로그" value={`${completedSteps}/${analysis.steps.length}`} />
@@ -615,15 +855,19 @@ function AnalysisReport({ analysis }: { analysis: AnalysisDetail }) {
       </div>
 
       <section className="reportBlock">
-        <h4>검토 범위</h4>
-        <div className="scopeList">
-          <span>공개 GitHub 저장소 코드 수집</span>
-          <span>업로드 문서 parsing</span>
-          <span>기능 누락 탐지: {analysis.totals.missingFeature}건</span>
-          <span>API 불일치 탐지: {analysis.totals.apiMismatch}건</span>
-          <span>Outdated 문서 탐지: {analysis.totals.outdatedDoc}건</span>
-        </div>
+        <h4>분석 범위</h4>
+        <AnalysisScopeBox analysis={analysis} />
       </section>
+
+      <BasisSpecificSection
+        analysis={analysis}
+        drafts={drafts}
+        draftApiKey={draftApiKey}
+        draftErrors={draftErrors}
+        draftLoading={draftLoading}
+        onDraftApiKeyChange={onDraftApiKeyChange}
+        onGenerateDraft={onGenerateDraft}
+      />
 
       <section className="reportBlock">
         <h4>업로드 문서</h4>
@@ -648,7 +892,15 @@ function AnalysisReport({ analysis }: { analysis: AnalysisDetail }) {
         {analysis.findings.length ? (
           <div className="findingList">
             {analysis.findings.map((finding) => (
-              <FindingCard key={finding.id} finding={finding} />
+              <FindingCard
+                key={finding.id}
+                analysis={analysis}
+                finding={finding}
+                draft={drafts[finding.id]}
+                draftError={draftErrors[finding.id]}
+                draftLoading={Boolean(draftLoading[finding.id])}
+                onGenerateDraft={onGenerateDraft}
+              />
             ))}
           </div>
         ) : (
@@ -714,6 +966,101 @@ function ReportActionSummary({ analysis }: { analysis: AnalysisDetail }) {
   );
 }
 
+function AnalysisScopeBox({ analysis }: { analysis: AnalysisDetail }) {
+  const scope = analysis.totals.scope;
+  const warnings = scope?.warnings ?? [];
+  return (
+    <div className="scopeList">
+      <span>수집된 코드 파일 수: {scope?.collectedCodeFileCount ?? 0}개</span>
+      <span>분석에 사용된 코드 청크 수: {scope?.codeChunkCount ?? 0}개</span>
+      <span>분석에 사용된 문서 청크 수: {scope?.documentChunkCount ?? 0}개</span>
+      <span>제외되거나 잘린 항목: {warnings.length ? "있음" : "확인된 항목 없음"}</span>
+      {scope?.githubTreeTruncated ? <span>GitHub tree 응답이 잘려 핵심 파일 위주로 분석했습니다.</span> : null}
+      {scope?.highlightMappingFailures ? (
+        <span>PDF 하이라이트 매핑 실패: {scope.highlightMappingFailures}건</span>
+      ) : null}
+      {warnings.map((warning) => (
+        <span key={warning}>{warning}</span>
+      ))}
+    </div>
+  );
+}
+
+function BasisSpecificSection({
+  analysis,
+  drafts,
+  draftApiKey,
+  draftErrors,
+  draftLoading,
+  onDraftApiKeyChange,
+  onGenerateDraft,
+}: {
+  analysis: AnalysisDetail;
+  drafts: Record<string, DocumentationDraft>;
+  draftApiKey: string;
+  draftErrors: Record<string, string>;
+  draftLoading: Record<string, boolean>;
+  onDraftApiKeyChange: (value: string) => void;
+  onGenerateDraft: (findingId: string) => void;
+}) {
+  if (analysis.comparisonBasis === "document_latest") {
+    const findings = analysis.findings.filter(
+      (finding) => finding.type === "missing_feature" || finding.type === "api_mismatch",
+    );
+    return (
+      <section className="reportBlock">
+        <h4>코드 반영 누락 가능 요구사항</h4>
+        <p>최신 문서에 정의된 요구사항이 현재 코드에 반영되지 않았을 가능성이 있습니다.</p>
+        <div className="findingList">
+          {findings.map((finding) => (
+            <FindingCard key={finding.id} analysis={analysis} finding={finding} />
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  if (analysis.comparisonBasis === "code_latest") {
+    const findings = analysis.findings.filter((finding) => finding.type === "outdated_doc");
+    return (
+      <section className="reportBlock">
+        <h4>문서에 반영되지 않은 구현 기능</h4>
+        <p>현재 코드에 구현된 기능이 업로드 문서에 반영되지 않았을 가능성이 있습니다.</p>
+        <label className="field compact draftKeyField">
+          <span>Gemini API Key</span>
+          <input
+            type="password"
+            value={draftApiKey}
+            onChange={(event) => onDraftApiKeyChange(event.target.value)}
+            placeholder="서버 GEMINI_API_KEY가 없을 때만 입력"
+            autoComplete="off"
+          />
+        </label>
+        <div className="findingList">
+          {findings.map((finding) => (
+            <FindingCard
+              key={finding.id}
+              analysis={analysis}
+              finding={finding}
+              draft={drafts[finding.id]}
+              draftError={draftErrors[finding.id]}
+              draftLoading={Boolean(draftLoading[finding.id])}
+              onGenerateDraft={onGenerateDraft}
+            />
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="reportBlock">
+      <h4>불일치 후보</h4>
+      <p>문서와 코드 간 불일치 후보가 발견되었습니다. 어느 쪽이 최신 기준인지 확인한 뒤 수정 방향을 결정하세요.</p>
+    </section>
+  );
+}
+
 function ReportMeta({ label, value }: { label: string; value: string }) {
   return (
     <div className="reportMeta">
@@ -741,10 +1088,12 @@ function ReportStorageSummary({ analysis }: { analysis: AnalysisDetail }) {
           value={analysis.repoOwner && analysis.repoName ? `${analysis.repoOwner}/${analysis.repoName}` : analysis.repoUrl}
         />
         <StorageItem label="Provider" value={analysis.provider.toUpperCase()} />
+        <StorageItem label="분석 기준" value={basisLabel(analysis.comparisonBasis)} />
         <StorageItem label="Status" value={statusLabel(analysis.status)} />
         <StorageItem label="문서 메타데이터" value={`${analysis.documents.length}개 저장`} />
         <StorageItem label="단계 로그" value={`${completedSteps}/${analysis.steps.length} 완료`} />
         <StorageItem label="Finding" value={`${analysis.findings.length}개 저장`} />
+        <StorageItem label="Artifact" value={`${analysis.artifacts.length}개 저장`} />
         <StorageItem label="완료 시각" value={analysis.completedAt ? new Date(analysis.completedAt).toLocaleString("ko-KR") : "-"} />
       </div>
       {analysis.documents.length ? (
@@ -791,8 +1140,26 @@ function Metric({
   );
 }
 
-function FindingCard({ finding }: { finding: AnalysisDetail["findings"][number] }) {
+function FindingCard({
+  analysis,
+  finding,
+  draft,
+  draftError,
+  draftLoading,
+  onGenerateDraft,
+}: {
+  analysis: AnalysisDetail;
+  finding: AnalysisDetail["findings"][number];
+  draft?: DocumentationDraft;
+  draftError?: string;
+  draftLoading?: boolean;
+  onGenerateDraft?: (findingId: string) => void;
+}) {
   const [open, setOpen] = useState(true);
+  const canDraft =
+    analysis.comparisonBasis === "code_latest" &&
+    finding.type === "outdated_doc" &&
+    Boolean(onGenerateDraft);
   return (
     <article className={`finding ${finding.severity}`}>
       <button className="findingHeader" onClick={() => setOpen((value) => !value)}>
@@ -805,16 +1172,119 @@ function FindingCard({ finding }: { finding: AnalysisDetail["findings"][number] 
         <div className="findingBody">
           <Evidence icon={<FileText />} label="문서 근거" text={finding.documentEvidence} />
           <Evidence icon={<Code2 />} label="코드 분석 결과" text={finding.codeEvidence} />
+          {finding.documentLocation?.pageNumber ? (
+            <Evidence
+              icon={<FileText />}
+              label="PDF 위치"
+              text={`${finding.documentLocation.documentName ?? "문서"} ${finding.documentLocation.pageNumber}페이지`}
+            />
+          ) : null}
+          {finding.codeLocations.length ? (
+            <Evidence icon={<Code2 />} label="코드 위치" text={formatCodeLocations(finding.codeLocations)} />
+          ) : null}
           <Evidence
             icon={<FolderGit2 />}
             label="관련 파일"
             text={finding.relatedFiles.length ? finding.relatedFiles.join(", ") : "관련 파일 특정 어려움"}
           />
           <Evidence icon={<Sparkles />} label="권장 조치" text={finding.recommendation} />
+          {analysis.comparisonBasis === "document_latest" ? (
+            <HighlightDownload analysis={analysis} finding={finding} />
+          ) : null}
+          {canDraft ? (
+            <div className="draftAction">
+              <button className="ghostButton" type="button" onClick={() => onGenerateDraft?.(finding.id)} disabled={draftLoading}>
+                {draftLoading ? <Loader2 className="spin" size={16} /> : <ClipboardList size={16} />}
+                이 기능 문서에 추가하기
+              </button>
+              {draftError ? <span className="draftError">{draftError}</span> : null}
+              {draft ? <DocumentationDraftBox draft={draft} /> : null}
+            </div>
+          ) : null}
           <div className="confidence">confidence {Math.round(finding.confidence * 100)}%</div>
         </div>
       ) : null}
     </article>
+  );
+}
+
+function HighlightDownload({
+  analysis,
+  finding,
+}: {
+  analysis: AnalysisDetail;
+  finding: AnalysisDetail["findings"][number];
+}) {
+  const hasCombinedArtifact = combinedHighlightArtifacts(analysis).some(
+    (artifact) => artifact.id === finding.documentLocation?.artifactId,
+  );
+  if (hasCombinedArtifact && finding.documentLocation?.highlightStatus === "created") {
+    return (
+      <div className="highlightNotice">
+        {finding.documentLocation.highlightMessage ??
+          "상단의 하이라이트 문서 다운 버튼에서 통합 PDF를 다운로드할 수 있습니다."}
+      </div>
+    );
+  }
+
+  const artifactId = finding.documentLocation?.artifactId;
+  if (artifactId && finding.documentLocation?.highlightStatus === "created") {
+    return (
+      <div className="draftAction">
+        <a className="ghostButton" href={`/api/analyses/${analysis.id}/artifacts/${artifactId}/download`}>
+          <Download size={16} />
+          하이라이트 PDF 다운로드
+        </a>
+        <span>{finding.documentLocation.highlightMessage}</span>
+      </div>
+    );
+  }
+  if (finding.documentLocation?.highlightMessage) {
+    return <div className="highlightNotice">{finding.documentLocation.highlightMessage}</div>;
+  }
+  return <div className="highlightNotice">이 finding은 PDF 텍스트 위치와 연결되지 않아 하이라이트 파일이 없습니다.</div>;
+}
+
+function combinedHighlightArtifacts(analysis: AnalysisDetail) {
+  return analysis.artifacts.filter((artifact) => artifact.type === "highlighted_source_pdf_combined");
+}
+
+function DocumentationDraftBox({ draft }: { draft: DocumentationDraft }) {
+  const text = [
+    `추가 권장 위치: ${draft.suggestedSection}`,
+    `추가 권장 제목: ${draft.suggestedTitle}`,
+    "",
+    draft.body,
+    "",
+    ...(draft.reviewNotes?.length ? ["검토 필요 사항:", ...draft.reviewNotes.map((note) => `- ${note}`)] : []),
+  ].join("\n");
+
+  return (
+    <div className="draftBox">
+      <strong>문서 추가 초안</strong>
+      <dl>
+        <div>
+          <dt>추가 권장 위치</dt>
+          <dd>{draft.suggestedSection}</dd>
+        </div>
+        <div>
+          <dt>추가 권장 제목</dt>
+          <dd>{draft.suggestedTitle}</dd>
+        </div>
+      </dl>
+      <p>{draft.body}</p>
+      {draft.reviewNotes?.length ? (
+        <ul>
+          {draft.reviewNotes.map((note) => (
+            <li key={note}>{note}</li>
+          ))}
+        </ul>
+      ) : null}
+      <button className="ghostButton" type="button" onClick={() => void navigator.clipboard.writeText(text)}>
+        <Copy size={16} />
+        복사하기
+      </button>
+    </div>
   );
 }
 
@@ -854,6 +1324,36 @@ function statusLabel(status: string) {
     running: "진행 중...",
   };
   return labels[status] ?? status;
+}
+
+function basisLabel(value: ComparisonBasis) {
+  const labels: Record<ComparisonBasis, string> = {
+    document_latest: "업로드 문서 최신",
+    code_latest: "GitHub 코드 최신",
+    unknown: "기준 모름",
+  };
+  return labels[value] ?? "기준 모름";
+}
+
+function selectedOptionSummary(options: { missingFeature: boolean; apiMismatch: boolean; outdatedDoc: boolean }) {
+  const selected = [
+    options.missingFeature ? "기능 누락" : null,
+    options.apiMismatch ? "API 불일치" : null,
+    options.outdatedDoc ? "Outdated 문서" : null,
+  ].filter(Boolean);
+  return selected.length ? selected.join(", ") : "선택된 유형 없음";
+}
+
+function formatCodeLocations(locations: AnalysisDetail["findings"][number]["codeLocations"]) {
+  return locations
+    .map((location) => {
+      const endpoint = location.endpoint ? `${location.endpoint.method} ${location.endpoint.path}` : null;
+      const lineRange =
+        location.startLine && location.endLine ? `:${location.startLine}-${location.endLine}` : "";
+      const symbol = location.symbolName ? ` · ${location.symbolName}` : "";
+      return `${location.path}${lineRange}${symbol}${endpoint ? ` · ${endpoint}` : ""}`;
+    })
+    .join(", ");
 }
 
 function typeLabel(type: string) {
@@ -928,6 +1428,7 @@ function buildReportMarkdown(analysis: AnalysisDetail) {
     `- Analysis ID: ${analysis.id}`,
     `- Repository: ${repository}`,
     `- Provider: ${analysis.provider.toUpperCase()}`,
+    `- 분석 기준: ${basisLabel(analysis.comparisonBasis)}`,
     `- Status: ${statusLabel(analysis.status)}`,
     `- Created At: ${createdAt}`,
     `- Completed At: ${completedAt}`,
@@ -940,6 +1441,9 @@ function buildReportMarkdown(analysis: AnalysisDetail) {
     `- High: ${analysis.totals.high}`,
     `- Medium: ${analysis.totals.medium}`,
     `- Low: ${analysis.totals.low}`,
+    `- 수집된 코드 파일 수: ${analysis.totals.scope?.collectedCodeFileCount ?? 0}`,
+    `- 코드 청크 수: ${analysis.totals.scope?.codeChunkCount ?? 0}`,
+    `- 문서 청크 수: ${analysis.totals.scope?.documentChunkCount ?? 0}`,
     "",
     "## 업로드 문서",
     ...documentMarkdownLines(analysis),
@@ -993,6 +1497,8 @@ function findingMarkdownLines(analysis: AnalysisDetail) {
     `- 심각도: ${finding.severity}`,
     `- Confidence: ${Math.round(finding.confidence * 100)}%`,
     `- 관련 파일: ${finding.relatedFiles.length ? finding.relatedFiles.join(", ") : "관련 파일 특정 어려움"}`,
+    `- PDF 위치: ${finding.documentLocation?.pageNumber ? `${finding.documentLocation.documentName ?? "문서"} ${finding.documentLocation.pageNumber}페이지` : "없음"}`,
+    `- 코드 위치: ${finding.codeLocations.length ? formatCodeLocations(finding.codeLocations) : "없음"}`,
     "",
     "문서 근거:",
     finding.documentEvidence,

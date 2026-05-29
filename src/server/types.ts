@@ -4,6 +4,8 @@ export type ProviderCredentials = {
   apiKey?: string;
 };
 
+export type ComparisonBasis = "document_latest" | "code_latest" | "unknown";
+
 export type FindingType = "missing_feature" | "api_mismatch" | "outdated_doc";
 
 export type Severity = "high" | "medium" | "low";
@@ -38,6 +40,8 @@ export type ParsedDocument = {
   size: number;
   text: string;
   chunks: DocumentChunk[];
+  pages?: ParsedDocumentPage[];
+  pdfTextItems?: PdfTextItem[];
 };
 
 export type DocumentChunk = {
@@ -45,6 +49,21 @@ export type DocumentChunk = {
   index: number;
   heading: string | null;
   text: string;
+  pageNumber?: number;
+};
+
+export type ParsedDocumentPage = {
+  pageNumber: number;
+  text: string;
+};
+
+export type PdfTextItem = {
+  pageNumber: number;
+  text: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 };
 
 export type SourceFile = {
@@ -59,6 +78,49 @@ export type CodeChunk = {
   startLine: number;
   endLine: number;
   text: string;
+};
+
+export type DocumentEvidenceLocation = {
+  documentName: string;
+  pageNumber?: number;
+  matchedText?: string;
+  boundingBoxes?: Array<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }>;
+  highlightStatus?: "created" | "not_applicable" | "mapping_failed" | "storage_unavailable";
+  highlightMessage?: string;
+  artifactId?: string;
+};
+
+export type CodeLocation = {
+  path: string;
+  symbolName?: string;
+  startLine?: number;
+  endLine?: number;
+  endpoint?: {
+    method: string;
+    path: string;
+  };
+};
+
+export type DocumentationDraft = {
+  suggestedSection: string;
+  suggestedTitle: string;
+  body: string;
+  supportingCodeLocations: CodeLocation[];
+  reviewNotes?: string[];
+};
+
+export type AnalysisScope = {
+  collectedCodeFileCount: number;
+  codeChunkCount: number;
+  documentChunkCount: number;
+  warnings: string[];
+  githubTreeTruncated: boolean;
+  highlightMappingFailures: number;
 };
 
 export type RepositorySnapshot = {
@@ -78,6 +140,8 @@ export type ReportFinding = {
   documentEvidence: string;
   codeEvidence: string;
   relatedFiles: string[];
+  documentLocation?: DocumentEvidenceLocation;
+  codeLocations?: CodeLocation[];
   recommendation: string;
   confidence: number;
 };

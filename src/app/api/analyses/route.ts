@@ -5,7 +5,7 @@ import { prisma } from "@/server/db";
 import { parseGithubRepoUrl } from "@/server/github";
 import { createSessionId, SESSION_COOKIE, sessionCookieOptions } from "@/server/session";
 import { serializeAnalysisSummary } from "@/server/serializers";
-import { createAnalysisSchema } from "@/server/validation";
+import { createAnalysisSchema, normalizeOptionsForBasis } from "@/server/validation";
 import type { UploadedDocumentInput } from "@/server/types";
 
 export const runtime = "nodejs";
@@ -30,17 +30,19 @@ export async function POST(request: Request) {
   const formData = await request.formData();
   const repoUrl = String(formData.get("repoUrl") ?? "");
   const provider = String(formData.get("provider") ?? "openai");
+  const comparisonBasis = String(formData.get("comparisonBasis") ?? "unknown");
   const apiKey = normalizeApiKey(formData.get("apiKey"));
   const options = {
     missingFeature: formData.get("missingFeature") !== "false",
     apiMismatch: formData.get("apiMismatch") !== "false",
     outdatedDoc: formData.get("outdatedDoc") !== "false",
   };
-  const parsed = createAnalysisSchema.safeParse({ repoUrl, provider, options });
+  const parsed = createAnalysisSchema.safeParse({ repoUrl, provider, comparisonBasis, options });
 
   if (!parsed.success) {
     return NextResponse.json({ error: "분석 요청 형식이 올바르지 않습니다." }, { status: 400 });
   }
+  const normalizedOptions = normalizeOptionsForBasis(parsed.data.comparisonBasis, parsed.data.options);
 
   let repoMeta: { owner: string; repo: string };
   try {
@@ -72,7 +74,8 @@ export async function POST(request: Request) {
       repoOwner: repoMeta.owner,
       repoName: repoMeta.repo,
       provider: parsed.data.provider,
-      optionsJson: JSON.stringify(parsed.data.options),
+      comparisonBasis: parsed.data.comparisonBasis,
+      optionsJson: JSON.stringify(normalizedOptions),
       status: "queued",
     },
   });
@@ -82,8 +85,9 @@ export async function POST(request: Request) {
     void runAnalysis(analysis.id, {
       repoUrl: parsed.data.repoUrl,
       provider: parsed.data.provider,
+      comparisonBasis: parsed.data.comparisonBasis,
       apiKey,
-      options: parsed.data.options,
+      options: normalizedOptions,
       documents,
     });
   });

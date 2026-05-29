@@ -13,5 +13,6 @@ prisma/*.db-journal
 *.tsbuildinfo
 npm-debug.log*
 .tmp-npm-cache/
+var/artifacts/
 agent-docs/
 test_repo/

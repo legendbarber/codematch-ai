@@ -108,7 +108,8 @@ select column_name
 from information_schema.columns
 where table_schema = 'public'
   and table_name in ('Analysis', 'UploadedDocument', 'AnalysisStep', 'Finding')
-  and column_name ilike '%key%';
+  and column_name ilike '%key%'
+  and not (table_name = 'AnalysisStep' and column_name = 'key');
 ```
 
-Expected result: no API-key storage column.
+Expected result: zero rows. `AnalysisStep.key` is a progress-step identifier, not an API key, so the query excludes it.

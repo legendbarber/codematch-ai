@@ -1,5 +1,11 @@
 import path from "node:path";
-import type { DocumentChunk, ParsedDocument, UploadedDocumentInput } from "./types";
+import type {
+  DocumentChunk,
+  ParsedDocument,
+  ParsedDocumentPage,
+  PdfTextItem,
+  UploadedDocumentInput,
+} from "./types";
 
 const MAX_DOCUMENT_CHARS = 80_000;
 const MAX_CHUNK_CHARS = 2_400;
@@ -13,7 +19,22 @@ export async function parseUploadedDocument(
   let text = "";
 
   if (extension === ".pdf" || mimeType === "application/pdf") {
-    text = await parsePdf(document.buffer);
+    const pdf = await parsePdf(document.buffer);
+    text = pdf.text;
+    const normalized = normalizeText(text).slice(0, MAX_DOCUMENT_CHARS);
+    if (normalized.length < 20) {
+      throw new Error(`${document.name}: 분석 가능한 텍스트를 찾지 못했습니다.`);
+    }
+
+    return {
+      name: document.name,
+      mimeType,
+      size: document.size,
+      text: normalized,
+      chunks: chunkPdfDocument(document.name, pdf.pages),
+      pages: pdf.pages,
+      pdfTextItems: pdf.items,
+    };
   } else if (isTextDocument(extension, mimeType)) {
     text = document.buffer.toString("utf8");
   } else {
@@ -49,15 +70,61 @@ function isTextDocument(extension: string, mimeType: string) {
   );
 }
 
-async function parsePdf(buffer: Buffer) {
+async function parsePdf(buffer: Buffer): Promise<{
+  text: string;
+  pages: ParsedDocumentPage[];
+  items: PdfTextItem[];
+}> {
   const { PDFParse } = (await import("pdf-parse")) as typeof import("pdf-parse");
   const parser = new PDFParse({ data: buffer });
   try {
-    const result = await parser.getText();
-    return result.text;
+    const [result, items] = await Promise.all([parser.getText({ pageJoiner: "\n" }), extractPdfTextItems(buffer)]);
+    const pages = result.pages.map((page) => ({
+      pageNumber: page.num,
+      text: normalizeText(page.text),
+    }));
+    return {
+      text: result.text,
+      pages,
+      items,
+    };
   } finally {
     await parser.destroy();
   }
+}
+
+async function extractPdfTextItems(buffer: Buffer): Promise<PdfTextItem[]> {
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const task = pdfjs.getDocument({
+    data: new Uint8Array(buffer),
+    disableFontFace: true,
+  });
+  const pdf = await task.promise;
+  const items: PdfTextItem[] = [];
+
+  try {
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+      const page = await pdf.getPage(pageNumber);
+      const textContent = await page.getTextContent();
+      for (const item of textContent.items) {
+        if (!("str" in item) || !item.str.trim()) continue;
+        const transform = item.transform as number[];
+        items.push({
+          pageNumber,
+          text: item.str,
+          x: transform[4],
+          y: transform[5],
+          width: item.width,
+          height: item.height || Math.abs(transform[3]) || 10,
+        });
+      }
+      page.cleanup();
+    }
+  } finally {
+    await pdf.destroy();
+  }
+
+  return items;
 }
 
 function normalizeText(text: string) {
@@ -99,6 +166,20 @@ export function chunkDocument(documentName: string, text: string): DocumentChunk
   }
 
   return chunks.filter((chunk) => chunk.text.length > 0).slice(0, 80);
+}
+
+function chunkPdfDocument(documentName: string, pages: ParsedDocumentPage[]): DocumentChunk[] {
+  const chunks: DocumentChunk[] = [];
+  for (const page of pages) {
+    for (const chunk of chunkDocument(documentName, page.text)) {
+      chunks.push({
+        ...chunk,
+        index: chunks.length,
+        pageNumber: page.pageNumber,
+      });
+    }
+  }
+  return chunks.slice(0, 80);
 }
 
 function splitIntoSections(text: string) {

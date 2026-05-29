@@ -15,6 +15,7 @@ model Analysis {
   repoOwner   String?
   repoName    String?
   provider    String
+  comparisonBasis String          @default("unknown")
   optionsJson String
   status      String             @default("queued")
   summary     String?
@@ -26,6 +27,8 @@ model Analysis {
   documents   UploadedDocument[]
   findings    Finding[]
   steps       AnalysisStep[]
+  artifacts   GeneratedArtifact[]
+  documentationDrafts DocumentationDraft[]
 
   @@index([sessionId, createdAt])
   @@index([status])
@@ -68,11 +71,45 @@ model Finding {
   documentEvidence String
   codeEvidence     String
   relatedFilesJson String
+  documentLocationJson String @default("{}")
+  codeLocationsJson String @default("[]")
   recommendation   String
   confidence       Float
   createdAt        DateTime @default(now())
   analysis         Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  documentationDrafts DocumentationDraft[]
 
   @@index([analysisId, severity])
   @@index([analysisId, type])
+}
+
+model GeneratedArtifact {
+  id          String   @id @default(cuid())
+  analysisId  String
+  findingId   String?
+  type        String
+  fileName    String
+  mimeType    String
+  storageKey  String
+  size        Int
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+
+  analysis    Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([analysisId])
+  @@index([analysisId, findingId])
+}
+
+model DocumentationDraft {
+  id          String   @id @default(cuid())
+  analysisId  String
+  findingId   String
+  draftJson   String
+  createdAt   DateTime @default(now())
+
+  analysis    Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  finding     Finding  @relation(fields: [findingId], references: [id], onDelete: Cascade)
+
+  @@index([analysisId, findingId])
 }

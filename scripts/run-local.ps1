@@ -24,5 +24,9 @@ npm run db:generate
 Write-Host "Syncing Prisma schema to database..."
 npm run db:push
 
-Write-Host "Starting CodeMatch AI at http://127.0.0.1:3000"
-npm run dev -- --hostname 127.0.0.1
+$env:WATCHPACK_POLLING = "true"
+$env:CHOKIDAR_USEPOLLING = "true"
+$env:NEXT_WEBPACK_USEPOLLING = "1"
+
+Write-Host "Starting CodeMatch AI with polling file watcher at http://127.0.0.1:3000"
+npm run dev:local

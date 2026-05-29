@@ -11,6 +11,7 @@ CodeMatch AI는 개발 문서와 GitHub 공개 저장소의 실제 코드 간 �
 - 사용자가 화면에서 provider별 API key를 입력해 환경변수 없이도 실제 AI 분석을 실행할 수 있게 한다.
 - Supabase Postgres에 분석 히스토리와 리포트 결과를 저장한다.
 - Google Cloud Run 배포로 확장 가능한 구조를 유지한다.
+- 사용자가 문서 최신/코드 최신/기준 모름 중 분석 기준본을 명시하고, 기준본에 맞는 후속 작업을 바로 수행할 수 있게 한다.
 
 ## Scope
 
@@ -23,12 +24,17 @@ CodeMatch AI는 개발 문서와 GitHub 공개 저장소의 실제 코드 간 �
 - 분석 히스토리 클릭 시 이전 리포트 재조회 및 표시.
 - 리포트 화면에서 Supabase 저장 상태 확인.
 - finding이 0건이어도 요약, 메타 정보, 검토 범위, 업로드 문서, 권장 조치가 포함된 리포트 표시.
+- 문서 최신 모드에서 텍스트 PDF 근거 위치를 매핑해 여러 누락 근거가 통합 하이라이트된 원본 PDF 복사본 생성 및 다운로드.
+- 코드 최신 모드에서 레포지토리에만 있고 문서에는 없는 구현 기능을 코드 위치/API endpoint 기반 문서 누락 섹션으로 표시.
+- Gemini 기반 문서 추가 초안 생성 및 복사.
+- 분석 범위, GitHub tree truncation, PDF 하이라이트 매핑 실패 여부 표시.
 
 ## Non-Goals
 
 - 비공개 저장소, GitHub App 설치, OAuth 로그인은 1차 범위에서 제외한다.
 - AI finding을 정적 분석 수준의 확정 판정으로 제공하지 않는다.
 - 업로드 원본 문서 파일, GitHub 코드 전체, 웹 입력 API key는 장기 저장하지 않는다.
+- OCR 기반 스캔 PDF 하이라이트, Word/HWP 원본 직접 수정, AI의 자동 문서 저장/배포는 제외한다.
 
 ## Milestones
 
@@ -65,11 +71,14 @@ CodeMatch AI는 개발 문서와 GitHub 공개 저장소의 실제 코드 간 �
 - 분석 결과와 히스토리는 Supabase 저장 데이터를 다시 조회해 화면에 표시한다.
 - finding 유무와 상관없이 분석 리포트 본문을 항상 표시한다.
 - 화면에 표시된 분석 리포트를 PDF 저장용 리포트 화면 또는 Markdown 파일로 로컬 다운로드할 수 있다.
+- 분석 기준 선택, 기준별 결과 섹션, 텍스트 PDF 통합 하이라이트 artifact, 코드 최신 모드 문서 초안 생성 기능을 구현했다.
 - API key 미입력 시 heuristic fallback 동작.
-- 다음 단계는 실제 OpenAI/Gemini API key를 사용한 품질 검증과 Cloud Run 배포다.
+- 다음 단계는 실제 OpenAI/Gemini API key를 사용한 품질 검증, production artifact storage 설계 확정, Cloud Run 배포 검증이다.
 
 ## Risks
 
 - LLM 결과 품질은 업로드 문서 품질과 수집된 코드 범위에 크게 의존한다.
 - 대형 저장소는 GitHub API rate limit과 모델 입력 길이 제한으로 일부 파일만 분석될 수 있다.
 - 공개 배포 시 인증 없이 API key 입력을 받으면 전송 보안과 남용 방지 정책이 필요하다.
+- 하이라이트 PDF는 텍스트 레이어가 있고 evidence 문구를 좌표로 매핑할 수 있는 PDF에만 생성된다.
+- local artifact storage는 개발 편의용이며 Cloud Run production 보존 저장소로 사용할 수 없다.

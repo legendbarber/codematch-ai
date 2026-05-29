@@ -34,6 +34,12 @@ export async function GET(_request: Request, context: RouteContext) {
       steps: {
         orderBy: { order: "asc" },
       },
+      artifacts: {
+        orderBy: { createdAt: "desc" },
+      },
+      documentationDrafts: {
+        orderBy: { createdAt: "desc" },
+      },
     },
   });
 
