@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { createStepRows, runAnalysis } from "@/server/analysis-runner";
 import { prisma } from "@/server/db";
+import { getExampleAnalysisSummary } from "@/server/example-analysis";
 import { parseGithubRepoUrl } from "@/server/github";
 import { createSessionId, SESSION_COOKIE, sessionCookieOptions } from "@/server/session";
 import { serializeAnalysisSummary } from "@/server/serializers";
@@ -19,7 +20,7 @@ export async function GET() {
   });
 
   const response = NextResponse.json({
-    analyses: analyses.map(serializeAnalysisSummary),
+    analyses: [getExampleAnalysisSummary(), ...analyses.map(serializeAnalysisSummary)],
   });
   setSessionCookie(response, sessionId, isNew);
   return response;

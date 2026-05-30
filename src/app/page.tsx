@@ -71,6 +71,7 @@ type AnalysisSummary = {
   totals: Totals;
   createdAt: string;
   completedAt: string | null;
+  isExample?: boolean;
 };
 
 type CodeLocation = {
@@ -162,6 +163,7 @@ const DEFAULT_STEPS = [
 
 const ACCEPTED_DOCUMENT_EXTENSIONS = [".md", ".markdown", ".txt", ".pdf", ".json", ".yaml", ".yml"];
 const MAX_DOCUMENTS = 5;
+const EXAMPLE_ANALYSIS_ID = "example-northstar-retailops-wide";
 
 const OPTION_PRESETS: Record<ComparisonBasis, { missingFeature: boolean; apiMismatch: boolean; outdatedDoc: boolean }> = {
   document_latest: {
@@ -210,7 +212,7 @@ export default function Home() {
     : false;
 
   useEffect(() => {
-    void loadHistory();
+    void loadInitialHistory();
   }, []);
 
   useEffect(() => {
@@ -237,6 +239,18 @@ export default function Home() {
   function handleComparisonBasisChange(nextBasis: ComparisonBasis) {
     setComparisonBasis(nextBasis);
     setOptions(OPTION_PRESETS[nextBasis]);
+  }
+
+  async function loadInitialHistory() {
+    const response = await fetch("/api/analyses", { cache: "no-store" });
+    const payload = await response.json();
+    if (response.ok) {
+      const analyses = payload.analyses as AnalysisSummary[];
+      setHistory(analyses);
+      if (analyses.some((analysis) => analysis.id === EXAMPLE_ANALYSIS_ID)) {
+        await loadAnalysis(EXAMPLE_ANALYSIS_ID);
+      }
+    }
   }
 
   async function loadHistory() {
@@ -797,7 +811,7 @@ export default function Home() {
         <div className="sectionHeader">
           <div>
             <h2>분석 히스토리</h2>
-            <p>익명 세션 기준으로 최근 20개 분석이 보관됩니다.</p>
+            <p>영구 예시 리포트와 익명 세션 기준 최근 20개 분석이 표시됩니다.</p>
           </div>
           <History size={24} />
         </div>
@@ -811,6 +825,7 @@ export default function Home() {
               <span>
                 <strong>{item.repoOwner && item.repoName ? `${item.repoOwner}/${item.repoName}` : item.repoUrl}</strong>
                 <small>
+                  {item.isExample ? "예시 리포트 · " : ""}
                   {item.provider.toUpperCase()} · {basisLabel(item.comparisonBasis)} · {new Date(item.createdAt).toLocaleString("ko-KR")}
                 </small>
               </span>
@@ -851,7 +866,7 @@ function AnalysisReport({
     <article className="reportDocument">
       <header className="reportHeader">
         <div>
-          <span className="reportEyebrow">CodeMatchAA Report</span>
+          <span className="reportEyebrow">{analysis.isExample ? "CodeMatchAA Example Report" : "CodeMatchAA Report"}</span>
           <h3>{repository} 정합성 분석 리포트</h3>
           <p>{analysis.summary ?? "분석 결과 요약을 생성하는 중입니다."}</p>
         </div>
@@ -1086,13 +1101,17 @@ function ReportMeta({ label, value }: { label: string; value: string }) {
 
 function ReportStorageSummary({ analysis }: { analysis: AnalysisDetail }) {
   const completedSteps = analysis.steps.filter((step) => step.status === "completed").length;
+  const title = analysis.isExample ? "영구 예시 리포트" : "DB 저장 확인";
+  const description = analysis.isExample
+    ? "이 리포트는 모든 세션에서 볼 수 있도록 앱에 번들된 예시 분석 데이터입니다."
+    : "이 리포트는 Supabase에 저장된 분석 데이터를 다시 불러와 표시합니다.";
   return (
-    <section className="storageSummary" aria-label="DB 저장 확인">
+    <section className="storageSummary" aria-label={title}>
       <div className="storageTitle">
         <Database size={20} />
         <div>
-          <strong>DB 저장 확인</strong>
-          <span>이 리포트는 Supabase에 저장된 분석 데이터를 다시 불러와 표시합니다.</span>
+          <strong>{title}</strong>
+          <span>{description}</span>
         </div>
       </div>
       <div className="storageGrid">

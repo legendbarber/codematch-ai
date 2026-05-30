@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { prisma } from "@/server/db";
+import { getExampleAnalysis } from "@/server/example-analysis";
 import { SESSION_COOKIE } from "@/server/session";
 import { serializeAnalysis } from "@/server/serializers";
 
@@ -13,9 +14,14 @@ type RouteContext = {
 };
 
 export async function GET(_request: Request, context: RouteContext) {
+  const { id } = await context.params;
+  const exampleAnalysis = getExampleAnalysis(id);
+  if (exampleAnalysis) {
+    return NextResponse.json({ analysis: exampleAnalysis });
+  }
+
   const cookieStore = await cookies();
   const sessionId = cookieStore.get(SESSION_COOKIE)?.value;
-  const { id } = await context.params;
 
   if (!sessionId) {
     return NextResponse.json({ error: "분석 세션을 찾을 수 없습니다." }, { status: 404 });
