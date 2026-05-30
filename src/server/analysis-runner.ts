@@ -1,4 +1,4 @@
-import { analyzeRepository } from "./analyzer";
+import { createAnalysisPlan, runAnalysisAgents, writeAnalysisReport } from "./analyzer";
 import {
   artifactExpiresAt,
   artifactStorageEnabled,
@@ -17,6 +17,7 @@ import type {
   DocumentEvidenceLocation,
   ParsedDocument,
   Provider,
+  ProviderCredentials,
   ReportFinding,
   UploadedDocumentInput,
 } from "./types";
@@ -25,15 +26,17 @@ export const ANALYSIS_STEPS = [
   { key: "repo", label: "Repository URL 확인" },
   { key: "collect", label: "GitHub 코드 수집" },
   { key: "parse", label: "문서 Parsing" },
-  { key: "analyze", label: "AI 비교 분석" },
-  { key: "report", label: "결과 리포트 생성" },
+  { key: "plan", label: "멀티 에이전트 분석 계획 수립" },
+  { key: "analyze", label: "분석 에이전트 2개 병렬 비교" },
+  { key: "write_report", label: "문서 작성 에이전트 최종 리포트 생성" },
+  { key: "report", label: "결과 저장 및 아티팩트 생성" },
 ] as const;
 
 type RunAnalysisInput = {
   repoUrl: string;
   provider: Provider;
   comparisonBasis: ComparisonBasis;
-  apiKey?: string;
+  credentials?: ProviderCredentials;
   options: AnalysisOptions;
   documents: UploadedDocumentInput[];
 };
@@ -74,19 +77,45 @@ export async function runAnalysis(analysisId: string, input: RunAnalysisInput) {
 
     await updateStatus(analysisId, "analyzing");
     const chunks = chunkSourceFiles(repository.files);
-    const report = await runStep(analysisId, "analyze", async () =>
-      analyzeRepository({
+    const analysisPlan = await runStep(analysisId, "plan", async () =>
+      createAnalysisPlan({
         provider: input.provider,
-        apiKey: input.apiKey,
         comparisonBasis: input.comparisonBasis,
         options: input.options,
         repository,
         documents: parsedDocuments,
         chunks,
+        credentials: input.credentials,
+      }),
+    );
+    const agentReports = await runStep(analysisId, "analyze", async () =>
+      runAnalysisAgents({
+        provider: input.provider,
+        credentials: input.credentials,
+        comparisonBasis: input.comparisonBasis,
+        options: input.options,
+        repository,
+        documents: parsedDocuments,
+        chunks,
+        analysisPlan,
       }),
     );
 
     await updateStatus(analysisId, "reporting");
+    const report = await runStep(analysisId, "write_report", async () =>
+      writeAnalysisReport({
+        provider: input.provider,
+        credentials: input.credentials,
+        comparisonBasis: input.comparisonBasis,
+        options: input.options,
+        repository,
+        documents: parsedDocuments,
+        chunks,
+        analysisPlan,
+        agentReports,
+      }),
+    );
+
     await runStep(analysisId, "report", async () => {
       const findings = await enrichFindingsWithArtifacts(analysisId, {
         comparisonBasis: input.comparisonBasis,

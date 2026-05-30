@@ -16,7 +16,10 @@ Analysis Runner
   |-- GitHub collector
   |-- Document parser
   |-- Code chunker
-  |-- AI analyzer
+  |-- Multi-agent analyzer
+  |   |-- Analysis planner
+  |   |-- Parallel analysis agents
+  |   |-- Report writer / merger
   |-- Report writer
   |-- Artifact writer
   |
@@ -32,11 +35,11 @@ The application runs as a Next.js app. UI and API routes live in `src/app`, whil
 
 1. User enters a public GitHub repository URL.
 2. User uploads one or more development documents.
-3. User selects `openai` or `gemini`.
+3. User selects the default provider and may enter OpenAI and/or Gemini API keys.
 4. User selects the comparison basis: uploaded document latest, GitHub code latest, or unknown.
-5. User may enter a provider API key for this request.
+5. User may enter OpenAI and/or Gemini API keys for this request.
 6. Server creates an `Analysis` row and step rows in Supabase.
-7. Analysis runner validates the URL, collects repository files, parses documents, chunks code, calls the selected provider, validates the report schema, stores findings, and records analysis scope.
+7. Analysis runner validates the URL, collects repository files, parses documents, chunks code, creates an analysis plan from document/structure signals, runs two independent analysis agents, merges them through the report writer, stores findings, and records analysis scope.
 8. In `document_latest` mode, text PDF evidence is mapped to PDF text item coordinates. If mapping succeeds, all mapped findings for the same source PDF are written into one combined highlighted copy of the uploaded source PDF and stored as a generated artifact.
 9. Browser polls `GET /api/analyses/:id` and renders progress, basis-specific result sections, downloadable artifacts, and final report data.
 
@@ -51,7 +54,8 @@ Input:
 - `repoUrl`: public GitHub repository URL.
 - `provider`: `openai` or `gemini`.
 - `comparisonBasis`: `document_latest`, `code_latest`, or `unknown`.
-- `apiKey`: optional provider API key for one request only.
+- `openaiApiKey`: optional OpenAI API key for one request only.
+- `geminiApiKey`: optional Gemini API key for one request only.
 - `missingFeature`: boolean string.
 - `apiMismatch`: boolean string.
 - `outdatedDoc`: boolean string.
@@ -64,7 +68,7 @@ Output:
 
 Security note:
 
-- `apiKey` is not stored in the database.
+- Provider API keys are not stored in the database.
 - Uploaded original document content is not stored in the database.
 
 ### `GET /api/analyses`
@@ -131,8 +135,10 @@ Stores progress state for:
 - Repository URL check
 - GitHub code collection
 - Document parsing
-- AI comparison
-- Report generation
+- Multi-agent analysis planning
+- Two-agent parallel comparison
+- Report writer agent final report generation
+- Result persistence and artifact generation
 
 ### `Finding`
 
@@ -168,17 +174,24 @@ The binary file is stored in the configured artifact storage, not in Prisma stri
 
 Stores Gemini-generated documentation draft JSON linked to an analysis and finding.
 
-## AI Provider Design
+## Multi-Agent Provider Design
 
-The analyzer supports `openai` and `gemini` through separate adapters and a shared report schema.
+The analyzer supports `openai` and `gemini` through separate adapters and a shared report schema. The runtime now follows the `multi-agent-docs/` design:
+
+1. Before the planning-agent provider call, the server reads `multi-agent-docs/agents/analysis-planner-agent.md`, `multi-agent-docs/multi-agent-workflow.md`, and `multi-agent-docs/output-contracts.md` through an allowlisted loader and injects the loaded content into the prompt. The planning agent then creates an analysis plan from repository structure, document chunks, endpoint signals, comparison basis, and selected detection types.
+2. Before each analysis-agent provider call, the server reads `multi-agent-docs/agents/analysis-agent.md`, `multi-agent-docs/hallucination-mitigation.md`, `multi-agent-docs/output-contracts.md`, and the required Markdown standards from `multi-agent-docs/detection-types/`. The loaded content is injected into the prompt so role, anti-hallucination policy, output contract, and detection criteria are runtime inputs instead of duplicated prompt constants.
+3. Two independent analysis agents run against the same plan, loaded prompt documents, loaded detection standards, and evidence. Code chunks are selected from `analysisPlan.targetAreas[].candidatePaths` first, including exact file, directory, and simple glob matches. If candidate paths do not cover enough collected code, keyword-ranked supplement chunks are added before falling back to the first collected chunks.
+4. Before the report-writer provider call, the server reads `multi-agent-docs/agents/report-writer-agent.md`, `multi-agent-docs/hallucination-mitigation.md`, `multi-agent-docs/output-contracts.md`, and `multi-agent-docs/multi-agent-workflow.md`. Static endpoint/function validation candidates are added as a separate input source before this call, so the report writer agent decides whether to include, lower-confidence, or discard them. A deterministic merger remains as fallback only when provider keys are unavailable and heuristic fallback is enabled.
 
 Provider key precedence:
 
-1. Web request API key.
+1. Web request provider-specific API key.
 2. Server environment variable.
-3. Heuristic fallback when enabled and no key exists.
+3. Heuristic fallback when enabled and no provider key exists.
 
-If a user provides an invalid API key, the provider error is returned instead of falling back. This avoids hiding real credential or billing issues.
+If both OpenAI and Gemini keys are available, one OpenAI analysis agent and one Gemini analysis agent run in parallel. If only one provider key is available, two independent calls use that provider. If a user provides an invalid API key, the provider error is returned instead of falling back. This avoids hiding real credential or billing issues.
+
+Planning and report-writing agents use the selected default provider when that provider has a request key or environment key; otherwise they use the other available provider. Their outputs are passed to the next stage rather than being treated as local-only hints.
 
 ## Artifact And Storage Policy
 

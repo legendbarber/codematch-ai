@@ -31,7 +31,9 @@ export async function POST(request: Request) {
   const repoUrl = String(formData.get("repoUrl") ?? "");
   const provider = String(formData.get("provider") ?? "openai");
   const comparisonBasis = String(formData.get("comparisonBasis") ?? "unknown");
-  const apiKey = normalizeApiKey(formData.get("apiKey"));
+  const legacyApiKey = normalizeApiKey(formData.get("apiKey"));
+  const openaiApiKey = normalizeApiKey(formData.get("openaiApiKey")) ?? (provider === "openai" ? legacyApiKey : undefined);
+  const geminiApiKey = normalizeApiKey(formData.get("geminiApiKey")) ?? (provider === "gemini" ? legacyApiKey : undefined);
   const options = {
     missingFeature: formData.get("missingFeature") !== "false",
     apiMismatch: formData.get("apiMismatch") !== "false",
@@ -86,7 +88,10 @@ export async function POST(request: Request) {
       repoUrl: parsed.data.repoUrl,
       provider: parsed.data.provider,
       comparisonBasis: parsed.data.comparisonBasis,
-      apiKey,
+      credentials: {
+        openaiApiKey,
+        geminiApiKey,
+      },
       options: normalizedOptions,
       documents,
     });

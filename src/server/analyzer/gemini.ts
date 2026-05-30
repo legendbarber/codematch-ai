@@ -1,12 +1,17 @@
-import { buildAnalysisPrompt } from "./prompt";
-import { parseDocumentationDraft, parseReport } from "./schema";
+import { loadRequiredDetectionDocs } from "./detection-docs";
+import { buildAnalysisPrompt, buildPlanningPrompt, buildReportWriterPrompt } from "./prompt";
+import { loadPromptDocsForStage } from "./prompt-docs";
+import { parseAnalysisPlan, parseDocumentationDraft, parseReport } from "./schema";
 import type {
+  AnalysisOptions,
+  AnalysisPlan,
   AnalysisReport,
   CodeChunk,
   CodeLocation,
   ComparisonBasis,
   DocumentationDraft,
   ParsedDocument,
+  Provider,
   RepositorySnapshot,
 } from "../types";
 
@@ -15,10 +20,73 @@ type AnalyzeInput = {
   documents: ParsedDocument[];
   chunks: CodeChunk[];
   comparisonBasis: ComparisonBasis;
+  options?: AnalysisOptions;
+  apiKey?: string;
+  analysisPlan?: AnalysisPlan;
+  agentId?: string;
+  provider?: Provider;
+};
+
+type PlanInput = {
+  repository: RepositorySnapshot;
+  documents: ParsedDocument[];
+  chunks: CodeChunk[];
+  comparisonBasis: ComparisonBasis;
   apiKey?: string;
 };
 
+type ReportWriterInput = {
+  repository: RepositorySnapshot;
+  comparisonBasis: ComparisonBasis;
+  analysisPlan: AnalysisPlan;
+  agentReports: Array<{
+    agentId: string;
+    provider: string;
+    report: AnalysisReport;
+  }>;
+  apiKey?: string;
+};
+
+export async function planWithGemini(input: PlanInput): Promise<AnalysisPlan> {
+  const promptDocs = await loadPromptDocsForStage("planner");
+  const text = await requestGeminiJson({
+    apiKey: input.apiKey,
+    prompt: buildPlanningPrompt({ ...input, promptDocs }),
+    responseSchema: geminiPlanResponseSchema,
+  });
+  return parseAnalysisPlan(JSON.parse(text));
+}
+
 export async function analyzeWithGemini(input: AnalyzeInput): Promise<AnalysisReport> {
+  const [promptDocs, detectionDocs] = await Promise.all([
+    loadPromptDocsForStage("analysis"),
+    loadRequiredDetectionDocs(input),
+  ]);
+  const text = await requestGeminiJson({
+    apiKey: input.apiKey,
+    prompt: buildAnalysisPrompt({ ...input, promptDocs, detectionDocs }),
+    responseSchema: geminiResponseSchema,
+  });
+  return parseReport(JSON.parse(text));
+}
+
+export async function writeReportWithGemini(input: ReportWriterInput): Promise<AnalysisReport> {
+  const promptDocs = await loadPromptDocsForStage("report_writer");
+  const text = await requestGeminiJson({
+    apiKey: input.apiKey,
+    prompt: buildReportWriterPrompt({ ...input, promptDocs }),
+    responseSchema: geminiResponseSchema,
+  });
+  return parseReport(JSON.parse(text));
+}
+
+type GeminiJsonInput = {
+  apiKey?: string;
+  prompt: string;
+  responseSchema: unknown;
+};
+
+async function requestGeminiJson(input: GeminiJsonInput) {
   const apiKey = input.apiKey || process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY가 설정되어 있지 않습니다.");
@@ -37,12 +105,12 @@ export async function analyzeWithGemini(input: AnalyzeInput): Promise<AnalysisRe
       body: JSON.stringify({
         contents: [
           {
-            parts: [{ text: buildAnalysisPrompt(input) }],
+            parts: [{ text: input.prompt }],
           },
         ],
         generationConfig: {
           responseMimeType: "application/json",
-          responseSchema: geminiResponseSchema,
+          responseSchema: input.responseSchema,
         },
       }),
       signal: AbortSignal.timeout(90_000),
@@ -63,7 +131,7 @@ export async function analyzeWithGemini(input: AnalyzeInput): Promise<AnalysisRe
     throw new Error("Gemini 응답에서 JSON 텍스트를 찾지 못했습니다.");
   }
 
-  return parseReport(JSON.parse(text));
+  return text;
 }
 
 type DraftInput = {
@@ -232,6 +300,55 @@ const geminiResponseSchema = {
           confidence: { type: "NUMBER" },
         },
       },
+    },
+  },
+} as const;
+
+const geminiPlanResponseSchema = {
+  type: "OBJECT",
+  required: ["summary", "targetAreas", "requiredDetectionDocs", "analysisNotes"],
+  properties: {
+    summary: { type: "STRING" },
+    targetAreas: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        required: [
+          "id",
+          "priority",
+          "documentRequirement",
+          "candidatePaths",
+          "detectionTypes",
+          "reason",
+          "uncertainty",
+        ],
+        properties: {
+          id: { type: "STRING" },
+          priority: { type: "STRING", enum: ["high", "medium", "low"] },
+          documentRequirement: { type: "STRING" },
+          candidatePaths: {
+            type: "ARRAY",
+            items: { type: "STRING" },
+          },
+          detectionTypes: {
+            type: "ARRAY",
+            items: {
+              type: "STRING",
+              enum: ["missing_feature", "api_mismatch", "outdated_doc"],
+            },
+          },
+          reason: { type: "STRING" },
+          uncertainty: { type: "STRING" },
+        },
+      },
+    },
+    requiredDetectionDocs: {
+      type: "ARRAY",
+      items: { type: "STRING" },
+    },
+    analysisNotes: {
+      type: "ARRAY",
+      items: { type: "STRING" },
     },
   },
 } as const;

@@ -154,8 +154,10 @@ const DEFAULT_STEPS = [
   "Repository URL 확인",
   "GitHub 코드 수집",
   "문서 Parsing",
-  "AI 비교 분석",
-  "결과 리포트 생성",
+  "멀티 에이전트 분석 계획 수립",
+  "분석 에이전트 2개 병렬 비교",
+  "문서 작성 에이전트 최종 리포트 생성",
+  "결과 저장 및 아티팩트 생성",
 ];
 
 const ACCEPTED_DOCUMENT_EXTENSIONS = [".md", ".markdown", ".txt", ".pdf", ".json", ".yaml", ".yml"];
@@ -183,7 +185,8 @@ export default function Home() {
   const [repoUrl, setRepoUrl] = useState("");
   const [provider, setProvider] = useState<Provider>("openai");
   const [comparisonBasis, setComparisonBasis] = useState<ComparisonBasis>("unknown");
-  const [apiKey, setApiKey] = useState("");
+  const [openaiApiKey, setOpenaiApiKey] = useState("");
+  const [geminiApiKey, setGeminiApiKey] = useState("");
   const [draftApiKey, setDraftApiKey] = useState("");
   const [drafts, setDrafts] = useState<Record<string, DocumentationDraft>>({});
   const [draftLoading, setDraftLoading] = useState<Record<string, boolean>>({});
@@ -277,7 +280,8 @@ export default function Home() {
     formData.set("repoUrl", repoUrl);
     formData.set("provider", provider);
     formData.set("comparisonBasis", comparisonBasis);
-    formData.set("apiKey", apiKey);
+    formData.set("openaiApiKey", openaiApiKey);
+    formData.set("geminiApiKey", geminiApiKey);
     formData.set("missingFeature", String(options.missingFeature));
     formData.set("apiMismatch", String(options.apiMismatch));
     formData.set("outdatedDoc", String(options.outdatedDoc));
@@ -572,25 +576,35 @@ export default function Home() {
 
           <div className="controlsRow">
             <label className="field compact">
-              <span>AI Provider</span>
+              <span>기본 AI Provider</span>
               <select value={provider} onChange={(event) => setProvider(event.target.value as Provider)}>
                 <option value="openai">OpenAI</option>
                 <option value="gemini">Gemini</option>
               </select>
             </label>
             <label className="field compact apiKeyField">
-              <span>{provider === "openai" ? "OpenAI API Key" : "Gemini API Key"}</span>
+              <span>OpenAI API Key</span>
               <div className="secretInput">
                 <KeyRound size={18} />
                 <input
                   type="password"
-                  value={apiKey}
-                  onChange={(event) => setApiKey(event.target.value)}
-                  placeholder={
-                    provider === "openai"
-                      ? "sk-... 또는 환경변수 사용"
-                      : "AIza... 또는 환경변수 사용"
-                  }
+                  value={openaiApiKey}
+                  onChange={(event) => setOpenaiApiKey(event.target.value)}
+                  placeholder="sk-... 또는 환경변수 사용"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </div>
+            </label>
+            <label className="field compact apiKeyField">
+              <span>Gemini API Key</span>
+              <div className="secretInput">
+                <KeyRound size={18} />
+                <input
+                  type="password"
+                  value={geminiApiKey}
+                  onChange={(event) => setGeminiApiKey(event.target.value)}
+                  placeholder="AIza... 또는 환경변수 사용"
                   autoComplete="off"
                   spellCheck={false}
                 />
@@ -600,7 +614,7 @@ export default function Home() {
 
           <div className="secretNotice">
             <ShieldCheck size={18} />
-            <span>입력한 API key는 분석 요청 1회에만 사용되며 DB에 저장하지 않습니다. 비워두면 서버 환경변수 또는 휴리스틱 fallback을 사용합니다.</span>
+            <span>입력한 API key는 분석 요청 1회에만 사용되며 DB에 저장하지 않습니다. 한 provider key만 있으면 같은 모델 분석 에이전트 2개를 실행하고, 두 key가 모두 있으면 OpenAI와 Gemini 분석 에이전트를 각각 실행합니다.</span>
           </div>
 
           <div className="advancedOptions">

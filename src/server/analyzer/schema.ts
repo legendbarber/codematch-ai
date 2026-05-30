@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { AnalysisOptions, AnalysisReport, ComparisonBasis, DocumentationDraft, FindingType } from "../types";
+import type { AnalysisOptions, AnalysisPlan, AnalysisReport, ComparisonBasis, DocumentationDraft, FindingType } from "../types";
 
 const codeLocationSchema = z.object({
   path: z.string().min(1).max(400),
@@ -55,6 +55,26 @@ export const documentationDraftSchema = z.object({
 export const analysisReportSchema = z.object({
   summary: z.string().min(1).max(1600),
   findings: z.array(reportFindingSchema).max(12),
+});
+
+export const analysisPlanSchema = z.object({
+  summary: z.string().min(1).max(1200),
+  targetAreas: z
+    .array(
+      z.object({
+        id: z.string().min(1).max(80),
+        priority: z.enum(["high", "medium", "low"]),
+        documentRequirement: z.string().min(1).max(800),
+        candidatePaths: z.array(z.string().min(1).max(400)).max(12),
+        detectionTypes: z.array(z.enum(["missing_feature", "api_mismatch", "outdated_doc"])).max(3),
+        reason: z.string().min(1).max(800),
+        uncertainty: z.string().min(1).max(800),
+      }),
+    )
+    .min(1)
+    .max(12),
+  requiredDetectionDocs: z.array(z.string().min(1).max(200)).max(3),
+  analysisNotes: z.array(z.string().min(1).max(600)).max(8),
 });
 
 export const reportJsonSchema = {
@@ -145,6 +165,66 @@ export const reportJsonSchema = {
     },
   },
 } as const;
+
+export const analysisPlanJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["summary", "targetAreas", "requiredDetectionDocs", "analysisNotes"],
+  properties: {
+    summary: { type: "string" },
+    targetAreas: {
+      type: "array",
+      maxItems: 12,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: [
+          "id",
+          "priority",
+          "documentRequirement",
+          "candidatePaths",
+          "detectionTypes",
+          "reason",
+          "uncertainty",
+        ],
+        properties: {
+          id: { type: "string" },
+          priority: { type: "string", enum: ["high", "medium", "low"] },
+          documentRequirement: { type: "string" },
+          candidatePaths: {
+            type: "array",
+            maxItems: 12,
+            items: { type: "string" },
+          },
+          detectionTypes: {
+            type: "array",
+            maxItems: 3,
+            items: {
+              type: "string",
+              enum: ["missing_feature", "api_mismatch", "outdated_doc"],
+            },
+          },
+          reason: { type: "string" },
+          uncertainty: { type: "string" },
+        },
+      },
+    },
+    requiredDetectionDocs: {
+      type: "array",
+      maxItems: 3,
+      items: { type: "string" },
+    },
+    analysisNotes: {
+      type: "array",
+      maxItems: 8,
+      items: { type: "string" },
+    },
+  },
+} as const;
+
+export function parseAnalysisPlan(payload: unknown): AnalysisPlan {
+  return analysisPlanSchema.parse(payload);
+}
 
 export function parseReport(payload: unknown): AnalysisReport {
   return analysisReportSchema.parse(payload);

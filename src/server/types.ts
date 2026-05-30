@@ -1,7 +1,8 @@
 export type Provider = "openai" | "gemini";
 
 export type ProviderCredentials = {
-  apiKey?: string;
+  openaiApiKey?: string;
+  geminiApiKey?: string;
 };
 
 export type ComparisonBasis = "document_latest" | "code_latest" | "unknown";
@@ -149,4 +150,19 @@ export type ReportFinding = {
 export type AnalysisReport = {
   summary: string;
   findings: ReportFinding[];
+};
+
+export type AnalysisPlan = {
+  summary: string;
+  targetAreas: Array<{
+    id: string;
+    priority: Severity;
+    documentRequirement: string;
+    candidatePaths: string[];
+    detectionTypes: FindingType[];
+    reason: string;
+    uncertainty: string;
+  }>;
+  requiredDetectionDocs: string[];
+  analysisNotes: string[];
 };

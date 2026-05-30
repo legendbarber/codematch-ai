@@ -11,7 +11,8 @@ CodeMatch AI는 개발 기술문서와 공개 GitHub repository의 실제 코드
 
 - GitHub repository URL 입력 및 공개 코드 수집
 - PDF, Markdown, text, JSON, YAML 문서 업로드 및 parsing
-- OpenAI 또는 Gemini 기반 문서-코드 정합성 분석
+- 분석 계획 에이전트, 병렬 분석 에이전트 2개, 문서 작성 에이전트 기반 문서-코드 정합성 분석
+- OpenAI/Gemini API key를 모두 제공하면 서로 다른 provider 분석 에이전트 병렬 실행
 - 분석 기준 선택: 업로드 문서 최신, GitHub 코드 최신, 기준 모름
 - 문서 최신 모드에서 텍스트 PDF 근거 위치를 원본 PDF 복사본 하나에 통합 하이라이트한 artifact 다운로드
 - 코드 최신 모드에서 레포지토리에만 있고 문서에는 없는 구현 기능만 코드 경로/API endpoint와 함께 표시
@@ -62,7 +63,9 @@ Windows에서 서버 종료 시 `Terminate batch job (Y/N)?`가 나오면 `Y`를
 
 - `openai`: `OPENAI_API_KEY`, `OPENAI_MODEL` 사용
 - `gemini`: `GEMINI_API_KEY`, `GEMINI_MODEL` 사용
-- 화면에서 입력한 API key는 해당 분석 요청 1회에만 사용하고 DB에 저장하지 않습니다.
+- 화면에서 입력한 OpenAI/Gemini API key는 해당 분석 요청 1회에만 사용하고 DB에 저장하지 않습니다.
+- OpenAI와 Gemini key가 모두 있으면 OpenAI 분석 에이전트 1개와 Gemini 분석 에이전트 1개를 병렬 실행합니다.
+- 한 provider key만 있으면 같은 provider 분석 에이전트 2개를 독립 호출합니다.
 - API key가 없고 `ALLOW_HEURISTIC_FALLBACK=true`이면 로컬 heuristic 분석으로 동작합니다.
 - 문서 추가 초안 생성은 Gemini를 사용합니다. 서버 `GEMINI_API_KEY`가 없으면 사용자가 초안 생성 요청 시점에 Gemini key를 입력해야 하며, 이 key도 DB에 저장하지 않습니다.
 

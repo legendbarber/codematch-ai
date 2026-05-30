@@ -17,8 +17,9 @@ CodeMatch AI는 Supabase를 PostgreSQL 데이터베이스로 사용한다. 애�
 4. 백그라운드 분석 runner가 GitHub 저장소를 수집하고 업로드 문서를 파싱한다.
 5. 파싱이 끝나면 업로드 문서의 원본이 아니라 파일명, MIME 타입, 크기, 추출 글자 수만 `UploadedDocument`에 저장한다.
 6. 분석 중 각 단계의 상태, 실패 메시지, 소요 시간을 `AnalysisStep`에 업데이트한다.
-7. 리포트 생성 단계에서 finding 목록과 요약, 집계값을 저장하고 `Analysis.status`를 `completed`로 바꾼다.
-8. 실패하면 `Analysis.status`를 `failed`로 바꾸고 `Analysis.error`에 오류 메시지를 저장한다.
+7. `write_report` 단계에서 문서 작성 에이전트가 최종 리포트를 생성한다.
+8. `report` 단계에서 finding 목록과 요약, 집계값, artifact metadata를 저장하고 `Analysis.status`를 `completed`로 바꾼다.
+9. 실패하면 `Analysis.status`를 `failed`로 바꾸고 `Analysis.error`에 오류 메시지를 저장한다.
 
 ## `Analysis`
 
@@ -108,15 +109,17 @@ CodeMatch AI는 Supabase를 PostgreSQL 데이터베이스로 사용한다. 애�
 
 ## `AnalysisStep`
 
-분석 진행 상황을 단계별로 저장한다. 새 분석이 생성되면 아래 5개 단계가 먼저 만들어지고, runner가 실행되면서 상태와 소요 시간이 갱신된다.
+분석 진행 상황을 단계별로 저장한다. 새 분석이 생성되면 아래 7개 단계가 먼저 만들어지고, runner가 실행되면서 상태와 소요 시간이 갱신된다.
 
 | order | key | label |
 | --- | --- | --- |
 | 1 | `repo` | `Repository URL 확인` |
 | 2 | `collect` | `GitHub 코드 수집` |
 | 3 | `parse` | `문서 Parsing` |
-| 4 | `analyze` | `AI 비교 분석` |
-| 5 | `report` | `결과 리포트 생성` |
+| 4 | `plan` | `멀티 에이전트 분석 계획 수립` |
+| 5 | `analyze` | `분석 에이전트 2개 병렬 비교` |
+| 6 | `write_report` | `문서 작성 에이전트 최종 리포트 생성` |
+| 7 | `report` | `결과 저장 및 아티팩트 생성` |
 
 | 컬럼 | 타입 | 설명 |
 | --- | --- | --- |
@@ -204,7 +207,7 @@ API 응답에서는 `serializeAnalysis`가 이 문자열을 파싱해 `relatedFi
 - 화면에서 입력한 OpenAI 또는 Gemini API key
 - AI provider 요청/응답 원문 전체
 
-API key는 `POST /api/analyses` 요청에서 `apiKey`로 전달되고, 해당 분석 실행 중 provider 호출에만 사용된다. DB에는 API key 컬럼이 없고, 문서에도 기록하지 않는 정책이다.
+API key는 `POST /api/analyses` 요청에서 `openaiApiKey`, `geminiApiKey`로 전달되고, 해당 분석 실행 중 provider 호출에만 사용된다. DB에는 API key 컬럼이 없고, 문서에도 기록하지 않는 정책이다.
 
 ## 세션과 히스토리
 
