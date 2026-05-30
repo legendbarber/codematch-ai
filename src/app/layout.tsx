@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "CodeMatch AI",
+  title: "CodeMatchAA",
   description: "AI 기반 개발 문서-코드 정합성 검증 시스템",
 };
 

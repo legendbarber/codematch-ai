@@ -1,6 +1,6 @@
 # DB Verification Guide
 
-CodeMatch AI stores report data in Supabase Postgres through Prisma. It does not store uploaded original files, full parsed document text, full GitHub source code, or web-entered AI API keys.
+CodeMatchAA stores report data in Supabase Postgres through Prisma. It does not store uploaded original files, full parsed document text, full GitHub source code, or web-entered AI API keys.
 
 ## What Should Be Stored
 

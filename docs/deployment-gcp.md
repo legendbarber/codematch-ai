@@ -1,6 +1,6 @@
 # Google Cloud Run Deployment Guide
 
-이 문서는 CodeMatch AI를 Google Cloud에 배포하는 절차를 정리한다. 현재 프로젝트에는 Cloud Run + Supabase Postgres + Secret Manager 조합을 권장한다.
+이 문서는 CodeMatchAA를 Google Cloud에 배포하는 절차를 정리한다. 현재 프로젝트에는 Cloud Run + Supabase Postgres + Secret Manager 조합을 권장한다.
 
 ## Recommended Architecture
 

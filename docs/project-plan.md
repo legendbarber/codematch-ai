@@ -1,8 +1,8 @@
-# CodeMatch AI Project Plan
+# CodeMatchAA Project Plan
 
 ## Overview
 
-CodeMatch AI는 개발 문서와 GitHub 공개 저장소의 실제 코드 간 정합성을 점검하는 웹 기반 베타 서비스다. 사용자는 Repository URL과 개발 문서를 입력하고, AI 기반 리포트로 기능 누락, API 불일치, outdated 문서 가능성을 확인한다.
+CodeMatchAA는 개발 문서와 GitHub 공개 저장소의 실제 코드 간 정합성을 점검하는 웹 기반 베타 서비스다. 사용자는 Repository URL과 개발 문서를 입력하고, AI 기반 리포트로 기능 누락, API 불일치, outdated 문서 가능성을 확인한다.
 
 ## Goals
 

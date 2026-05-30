@@ -197,7 +197,7 @@ export async function generateDocumentationDraftWithGemini(input: DraftInput): P
 
 function buildDraftPrompt(input: DraftInput) {
   return `
-You are CodeMatch AI. Write a Korean documentation addition draft based only on the provided code evidence.
+You are CodeMatchAA. Write a Korean documentation addition draft based only on the provided code evidence.
 Return JSON only.
 
 Finding title:

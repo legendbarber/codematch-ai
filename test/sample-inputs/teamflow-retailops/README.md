@@ -1,6 +1,6 @@
 # TeamFlow RetailOps Sample Fixtures
 
-This directory contains sample inputs for validating CodeMatch AI behavior.
+This directory contains sample inputs for validating CodeMatchAA behavior.
 
 ## Fixture Layout
 

@@ -1,7 +1,7 @@
-# CodeMatch AI Codebase Map
+# CodeMatchAA Codebase Map
 
 This document explains the top-level folders and important root files in the
-CodeMatch AI repository.
+CodeMatchAA repository.
 
 ## Top-Level Folders
 

@@ -26,9 +26,9 @@ export const ANALYSIS_STEPS = [
   { key: "repo", label: "Repository URL 확인" },
   { key: "collect", label: "GitHub 코드 수집" },
   { key: "parse", label: "문서 Parsing" },
-  { key: "plan", label: "멀티 에이전트 분석 계획 수립" },
-  { key: "analyze", label: "분석 에이전트 2개 병렬 비교" },
-  { key: "write_report", label: "문서 작성 에이전트 최종 리포트 생성" },
+  { key: "plan", label: "분석 계획 수립" },
+  { key: "analyze", label: "분석 중" },
+  { key: "write_report", label: "분석 리포트 생성" },
   { key: "report", label: "결과 저장 및 아티팩트 생성" },
 ] as const;
 

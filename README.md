@@ -1,11 +1,11 @@
-# CodeMatch AI
+# CodeMatchAA
 
 | 항목 | 내용 |
 | --- | --- |
 | Updated | 2026-05-23 |
 | Updated By | lgs010704@gmail.com |
 
-CodeMatch AI는 개발 기술문서와 공개 GitHub repository의 실제 코드를 비교해 기능 누락, API 불일치, 오래된 문서 가능성을 리포트로 보여주는 웹 애플리케이션입니다.
+CodeMatchAA는 개발 기술문서와 공개 GitHub repository의 실제 코드를 비교해 기능 누락, API 불일치, 오래된 문서 가능성을 리포트로 보여주는 웹 애플리케이션입니다.
 
 ## 주요 기능
 

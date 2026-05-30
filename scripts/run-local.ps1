@@ -28,5 +28,5 @@ $env:WATCHPACK_POLLING = "true"
 $env:CHOKIDAR_USEPOLLING = "true"
 $env:NEXT_WEBPACK_USEPOLLING = "1"
 
-Write-Host "Starting CodeMatch AI with polling file watcher at http://127.0.0.1:3000"
+Write-Host "Starting CodeMatchAA with polling file watcher at http://127.0.0.1:3000"
 npm run dev:local

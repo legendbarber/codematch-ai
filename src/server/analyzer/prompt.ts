@@ -52,7 +52,7 @@ export function buildPlanningPrompt({
     .join("\n");
 
   return `
-당신은 CodeMatch AI의 분석 계획 에이전트다.
+당신은 CodeMatchAA의 분석 계획 에이전트다.
 목표는 업로드 기술문서와 GitHub 레포지토리의 디렉터리 구조를 비교해 후속 분석 계획을 만드는 것이다.
 
 중요한 제약:
@@ -129,7 +129,7 @@ export function buildAnalysisPrompt({
     .join("\n\n---\n\n");
 
   return `
-You are CodeMatch AI's analysis agent.
+You are CodeMatchAA's analysis agent.
 Persona:
 - You are a senior software maintenance reviewer who compares technical documents with real code.
 - You must be evidence-first, conservative about absence, and explicit about uncertainty.
@@ -201,7 +201,7 @@ export function buildReportWriterPrompt({
   agentReports,
 }: ReportWriterPromptInput) {
   return `
-당신은 CodeMatch AI의 문서 작성 에이전트다.
+당신은 CodeMatchAA의 문서 작성 에이전트다.
 목표는 분석 계획 에이전트의 계획, 두 분석 에이전트의 결과, 선택적으로 제공되는 정적 검증 후보를 비교해 최종 사용자 리포트를 작성하는 것이다.
 
 중요한 규칙:

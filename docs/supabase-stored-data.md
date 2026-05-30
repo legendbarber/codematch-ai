@@ -1,6 +1,6 @@
 # Supabase Stored Data
 
-CodeMatch AI는 Supabase를 PostgreSQL 데이터베이스로 사용한다. 애플리케이션 코드는 Supabase SDK가 아니라 Prisma Client를 통해 Supabase Postgres에 접근한다.
+CodeMatchAA는 Supabase를 PostgreSQL 데이터베이스로 사용한다. 애플리케이션 코드는 Supabase SDK가 아니라 Prisma Client를 통해 Supabase Postgres에 접근한다.
 
 스키마의 원본은 `prisma/schema.prisma`이며, 현재 저장 테이블은 다음 4개다.
 
@@ -116,9 +116,9 @@ CodeMatch AI는 Supabase를 PostgreSQL 데이터베이스로 사용한다. 애�
 | 1 | `repo` | `Repository URL 확인` |
 | 2 | `collect` | `GitHub 코드 수집` |
 | 3 | `parse` | `문서 Parsing` |
-| 4 | `plan` | `멀티 에이전트 분석 계획 수립` |
-| 5 | `analyze` | `분석 에이전트 2개 병렬 비교` |
-| 6 | `write_report` | `문서 작성 에이전트 최종 리포트 생성` |
+| 4 | `plan` | `분석 계획 수립` |
+| 5 | `analyze` | `분석 중` |
+| 6 | `write_report` | `분석 리포트 생성` |
 | 7 | `report` | `결과 저장 및 아티팩트 생성` |
 
 | 컬럼 | 타입 | 설명 |

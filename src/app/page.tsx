@@ -154,9 +154,9 @@ const DEFAULT_STEPS = [
   "Repository URL 확인",
   "GitHub 코드 수집",
   "문서 Parsing",
-  "멀티 에이전트 분석 계획 수립",
-  "분석 에이전트 2개 병렬 비교",
-  "문서 작성 에이전트 최종 리포트 생성",
+  "분석 계획 수립",
+  "분석 중",
+  "분석 리포트 생성",
   "결과 저장 및 아티팩트 생성",
 ];
 
@@ -430,7 +430,7 @@ export default function Home() {
           <span className="brandMark">
             <Code2 size={24} />
           </span>
-          <span>CodeMatch <strong>AI</strong></span>
+          <span>CodeMatchAA</span>
         </div>
         <nav>
           <a href="#features">기능</a>
@@ -441,7 +441,7 @@ export default function Home() {
 
       <section className="hero">
         <div className="heroText">
-          <h1>CodeMatch AI</h1>
+          <h1>CodeMatchAA</h1>
         </div>
       </section>
 
@@ -851,7 +851,7 @@ function AnalysisReport({
     <article className="reportDocument">
       <header className="reportHeader">
         <div>
-          <span className="reportEyebrow">CodeMatch AI Report</span>
+          <span className="reportEyebrow">CodeMatchAA Report</span>
           <h3>{repository} 정합성 분석 리포트</h3>
           <p>{analysis.summary ?? "분석 결과 요약을 생성하는 중입니다."}</p>
         </div>
@@ -1906,7 +1906,7 @@ function buildPrintableReportHtml(analysis: AnalysisDetail) {
 <body>
   <main class="page">
     <section class="cover">
-      <div class="brand"><span class="mark">&lt;/&gt;</span> CodeMatch AI Report</div>
+      <div class="brand"><span class="mark">&lt;/&gt;</span> CodeMatchAA Report</div>
       <h1>${escapeHtml(repository)}<br />정합성 분석 리포트</h1>
       <p class="subtitle">${escapeHtml(analysis.summary ?? "분석 결과 요약이 없습니다.")}</p>
       <div class="coverMeta">
@@ -1971,7 +1971,7 @@ function buildPrintableReportHtml(analysis: AnalysisDetail) {
       </section>
 
       <div class="footer">
-        CodeMatch AI 리포트는 AI 기반 의심 항목과 근거를 제공하는 검토 보조 자료입니다. 업로드 원본 파일과 API key는 이 리포트에 포함되지 않습니다.
+        CodeMatchAA 리포트는 AI 기반 의심 항목과 근거를 제공하는 검토 보조 자료입니다. 업로드 원본 파일과 API key는 이 리포트에 포함되지 않습니다.
       </div>
     </section>
   </main>
@@ -2070,7 +2070,7 @@ function buildMarkdownReport(analysis: AnalysisDetail) {
   const repository =
     analysis.repoOwner && analysis.repoName ? `${analysis.repoOwner}/${analysis.repoName}` : analysis.repoUrl;
   const lines = [
-    "# CodeMatch AI Report",
+    "# CodeMatchAA Report",
     "",
     `- Repository: ${repository}`,
     `- Provider: ${analysis.provider.toUpperCase()}`,
