@@ -58,31 +58,19 @@ const documents: ParsedDocument[] = [
 ];
 
 describe("loadRequiredDetectionDocs", () => {
-  it("loads only document-latest detection documents selected by options", async () => {
+  it("loads document-latest detection documents from the comparison basis preset", async () => {
     const docs = await loadRequiredDetectionDocs({
-      analysisPlan,
       comparisonBasis: "document_latest",
-      options: {
-        missingFeature: true,
-        apiMismatch: false,
-        outdatedDoc: true,
-      },
     });
 
-    expect(docs.map((doc) => doc.type)).toEqual(["missing_feature"]);
+    expect(docs.map((doc) => doc.type)).toEqual(["missing_feature", "api_mismatch"]);
     expect(docs[0].relativePath).toBe("multi-agent-docs/detection-types/missing-feature.md");
     expect(docs[0].content).toContain("# missing_feature 탐지 기준");
   });
 
   it("loads the code-latest detection document and injects it into the analysis prompt", async () => {
     const docs = await loadRequiredDetectionDocs({
-      analysisPlan,
       comparisonBasis: "code_latest",
-      options: {
-        missingFeature: true,
-        apiMismatch: true,
-        outdatedDoc: true,
-      },
     });
 
     const prompt = buildAnalysisPrompt({
@@ -107,5 +95,13 @@ describe("loadRequiredDetectionDocs", () => {
     expect(prompt).toContain("Source: multi-agent-docs/detection-types/outdated-doc.md");
     expect(prompt).toContain("# outdated_doc 탐지 기준");
     expect(prompt).not.toContain("# missing_feature 탐지 기준");
+  });
+
+  it("loads all detection documents for the unknown comparison basis", async () => {
+    const docs = await loadRequiredDetectionDocs({
+      comparisonBasis: "unknown",
+    });
+
+    expect(docs.map((doc) => doc.type)).toEqual(["missing_feature", "api_mismatch", "outdated_doc"]);
   });
 });

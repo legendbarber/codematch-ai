@@ -22,7 +22,7 @@
 - 업로드 문서 청크.
 - 선택된 코드 청크.
 - endpoint, function, class 등 정적 코드 신호.
-- `comparisonBasis`와 분석 옵션.
+- `comparisonBasis`와 자동 적용된 탐지 유형.
 
 ## 출력 책임
 

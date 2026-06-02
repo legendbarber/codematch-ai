@@ -12,7 +12,7 @@ CodeMatchAA의 멀티 에이전트 분석은 `분석 계획 에이전트 -> 분�
 - 레포지토리 owner/repo, default branch, 설명.
 - 수집된 파일의 path 목록과 디렉터리 tree.
 - 사용자가 선택한 `comparisonBasis`.
-- 사용자가 선택한 탐지 옵션.
+- `comparisonBasis`에서 자동 결정된 탐지 유형.
 
 제한:
 
@@ -45,7 +45,7 @@ CodeMatchAA의 멀티 에이전트 분석은 `분석 계획 에이전트 -> 분�
 - 선택된 탐지 유형 문서.
 - 문서 청크와 필요한 코드 청크.
 - 코드 endpoint/function/class 신호.
-- `comparisonBasis`와 옵션.
+- `comparisonBasis`와 자동 적용된 탐지 유형.
 
 출력:
 

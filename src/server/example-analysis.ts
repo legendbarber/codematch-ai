@@ -26,8 +26,7 @@ const exampleAnalysis = {
     apiMismatch: 0,
     outdatedDoc: 1,
     high: 1,
-    medium: 2,
-    low: 1,
+    low: 3,
     scope: {
       collectedCodeFileCount: 21,
       codeChunkCount: 72,
@@ -119,7 +118,7 @@ const exampleAnalysis = {
     {
       id: "example-finding-notification-read",
       type: "missing_feature",
-      severity: "medium",
+      severity: "low",
       title: "알림 읽음 처리 API와 readAt 갱신 흐름 누락 후보",
       documentEvidence:
         "기술 문서 4.4는 사용자가 알림을 읽음 처리할 수 있어야 하며, 읽음 처리 시각을 readAt으로 저장해야 한다고 정의합니다.",
@@ -209,7 +208,7 @@ const exampleAnalysis = {
     {
       id: "example-finding-task-list-pagination",
       type: "missing_feature",
-      severity: "medium",
+      severity: "low",
       title: "업무 목록 페이지 응답 메타데이터 누락 후보",
       documentEvidence:
         "기술 문서 4.1은 업무 목록 응답을 페이지 단위로 제공하고, 대량 업무가 존재해도 과도한 데이터를 반환하지 않아야 한다고 정의합니다.",

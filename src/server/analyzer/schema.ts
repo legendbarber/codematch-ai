@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { AnalysisOptions, AnalysisPlan, AnalysisReport, ComparisonBasis, DocumentationDraft, FindingType } from "../types";
+import { normalizeOptionsForBasis } from "../validation";
 
 const codeLocationSchema = z.object({
   path: z.string().min(1).max(400),
@@ -236,7 +237,7 @@ export function parseDocumentationDraft(payload: unknown): DocumentationDraft {
 
 export function filterReportByOptions(
   report: AnalysisReport,
-  options: AnalysisOptions,
+  _options: AnalysisOptions,
   comparisonBasis: ComparisonBasis = "unknown",
 ): AnalysisReport {
   if (comparisonBasis === "code_latest") {
@@ -246,6 +247,7 @@ export function filterReportByOptions(
     };
   }
 
+  const options = normalizeOptionsForBasis(comparisonBasis);
   const allowed = new Set<FindingType>();
   if (options.missingFeature) allowed.add("missing_feature");
   if (options.apiMismatch) allowed.add("api_mismatch");

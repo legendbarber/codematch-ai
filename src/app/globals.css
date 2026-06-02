@@ -376,24 +376,6 @@ h2 {
   margin-top: 1px;
 }
 
-.checksRow {
-  display: grid;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid #dfe7f3;
-  border-top: 0;
-  border-radius: 0 0 8px 8px;
-  background: #fbfdff;
-}
-
-.checksRow p {
-  margin: 0;
-  color: var(--muted);
-  line-height: 1.5;
-  font-size: 14px;
-  font-weight: 700;
-}
-
 .basisGroup {
   display: grid;
   gap: 10px;
@@ -485,75 +467,6 @@ h2 {
 
 .compact {
   margin-bottom: 0;
-}
-
-.advancedOptions {
-  margin-top: 16px;
-}
-
-.advancedToggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-  min-height: 54px;
-  padding: 10px 12px;
-  border: 1px solid #d7dfec;
-  border-radius: 8px;
-  color: #17213a;
-  background: #ffffff;
-  cursor: pointer;
-  text-align: left;
-}
-
-.advancedToggle span {
-  display: grid;
-  gap: 3px;
-}
-
-.advancedToggle small {
-  color: var(--muted);
-  line-height: 1.4;
-  font-weight: 700;
-}
-
-.advancedToggle svg {
-  color: #607399;
-  flex: 0 0 auto;
-}
-
-.advancedToggle svg.open {
-  transform: rotate(180deg);
-}
-
-.advancedToggle:has(+ .checksRow) {
-  border-radius: 8px 8px 0 0;
-}
-
-.checks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding-bottom: 2px;
-}
-
-.checks label {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 0 12px;
-  border: 1px solid #d7dfec;
-  border-radius: 8px;
-  background: #ffffff;
-  font-weight: 800;
-}
-
-.checks input {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--blue);
 }
 
 .submitButton {

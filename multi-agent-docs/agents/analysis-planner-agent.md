@@ -14,7 +14,7 @@
 - 레포지토리 디렉터리 구조와 파일 path 목록.
 - 문서 요약, heading, 요구사항 후보.
 - 선택된 `comparisonBasis`.
-- 사용자가 선택한 탐지 옵션.
+- `comparisonBasis`에서 자동 결정된 탐지 유형.
 
 ## 출력 책임
 
@@ -56,8 +56,8 @@
 분석 기준:
 {{comparisonBasis}}
 
-선택된 탐지 옵션:
-{{analysisOptions}}
+자동 적용 탐지 유형:
+{{detectionTypes}}
 
 업로드 문서 요약:
 {{documentSummary}}

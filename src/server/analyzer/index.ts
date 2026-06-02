@@ -85,7 +85,7 @@ export async function createAnalysisPlan(input: Omit<AnalyzeInput, "analysisPlan
 function createFallbackAnalysisPlan(input: Omit<AnalyzeInput, "analysisPlan">, reason?: string): AnalysisPlan {
   const codeSignals = summarizeCodeSignals(input.chunks);
   const documentChunks = input.documents.flatMap((document) => document.chunks);
-  const detectionTypes = detectionTypesFor(input.comparisonBasis, input.options);
+  const detectionTypes = detectionTypesFor(input.comparisonBasis);
   const candidateFiles = codeSignals.files.length
     ? codeSignals.files
     : input.repository.files.map((file) => file.path).slice(0, 120);
@@ -397,16 +397,10 @@ function providerLabel(provider: Provider) {
   return provider === "openai" ? "OpenAI" : "Gemini";
 }
 
-function detectionTypesFor(comparisonBasis: ComparisonBasis, options: AnalysisOptions): FindingType[] {
+function detectionTypesFor(comparisonBasis: ComparisonBasis): FindingType[] {
   if (comparisonBasis === "code_latest") return ["outdated_doc"];
-  if (comparisonBasis === "document_latest") {
-    return ["missing_feature", ...(options.apiMismatch ? ["api_mismatch" as const] : [])];
-  }
-  return [
-    ...(options.missingFeature ? ["missing_feature" as const] : []),
-    ...(options.apiMismatch ? ["api_mismatch" as const] : []),
-    ...(options.outdatedDoc ? ["outdated_doc" as const] : []),
-  ];
+  if (comparisonBasis === "document_latest") return ["missing_feature", "api_mismatch"];
+  return ["missing_feature", "api_mismatch", "outdated_doc"];
 }
 
 function compactText(value: string, max: number) {

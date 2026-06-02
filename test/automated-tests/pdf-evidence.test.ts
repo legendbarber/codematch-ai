@@ -27,7 +27,7 @@ describe("PDF evidence location", () => {
     const location = locateFindingInPdf(
       {
         type: "missing_feature",
-        severity: "high",
+        severity: "low",
         title: "Danger zone slow down",
         documentEvidence: "Danger zone automatic slow down is required.",
         codeEvidence: "수집·분석된 코드 범위에서 구현 근거를 확인하지 못했습니다.",

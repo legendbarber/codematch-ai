@@ -11,7 +11,7 @@ CodeMatchAA는 Supabase를 PostgreSQL 데이터베이스로 사용한다. 애플
 
 ## 저장 흐름 요약
 
-1. 사용자가 저장소 URL, provider, 분석 옵션, 개발 문서를 제출한다.
+1. 사용자가 저장소 URL, provider, 분석 기준, 개발 문서를 제출한다.
 2. `POST /api/analyses`가 익명 세션 쿠키를 확인하거나 새로 만들고 `Analysis` 레코드를 생성한다.
 3. 같은 요청에서 고정된 분석 단계 목록을 `AnalysisStep`에 미리 생성한다.
 4. 백그라운드 분석 runner가 GitHub 저장소를 수집하고 업로드 문서를 파싱한다.
@@ -33,7 +33,7 @@ CodeMatchAA는 Supabase를 PostgreSQL 데이터베이스로 사용한다. 애플
 | `repoOwner` | `String?` | GitHub owner 또는 organization 이름. URL 파싱 또는 저장소 수집 후 저장된다. |
 | `repoName` | `String?` | GitHub repository 이름. |
 | `provider` | `String` | 분석 provider. 현재 값은 `openai` 또는 `gemini`다. |
-| `optionsJson` | `String` | 사용자가 선택한 분석 옵션 JSON 문자열. |
+| `optionsJson` | `String` | 분석 기준에 따라 자동 적용된 탐지 유형 preset JSON 문자열. |
 | `status` | `String` | 분석 상태. 기본값은 `queued`다. |
 | `summary` | `String?` | 최종 분석 요약 문장. 분석 성공 후 저장된다. |
 | `totalsJson` | `String?` | finding 집계 JSON 문자열. 분석 성공 후 저장된다. |
@@ -44,7 +44,7 @@ CodeMatchAA는 Supabase를 PostgreSQL 데이터베이스로 사용한다. 애플
 
 ### `optionsJson`
 
-분석 옵션은 문자열 컬럼에 JSON으로 저장된다.
+분석 기준에 따라 자동 적용된 탐지 유형 preset은 문자열 컬럼에 JSON으로 저장된다.
 
 ```json
 {
@@ -81,8 +81,7 @@ CodeMatchAA는 Supabase를 PostgreSQL 데이터베이스로 사용한다. 애플
   "apiMismatch": 1,
   "outdatedDoc": 1,
   "high": 1,
-  "medium": 2,
-  "low": 0
+  "low": 2
 }
 ```
 
@@ -170,11 +169,12 @@ CodeMatchAA는 Supabase를 PostgreSQL 데이터베이스로 사용한다. 애플
 
 ### `severity`
 
-현재 심각도 값은 다음 3개다.
+신규 분석의 심각도 값은 다음 2개다.
 
 - `high`
-- `medium`
 - `low`
+
+기존 저장 데이터에 `medium`이 남아 있으면 API serializer가 `high`로 합쳐서 응답한다.
 
 ### `relatedFilesJson`
 

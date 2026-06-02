@@ -88,7 +88,7 @@
   "findings": [
     {
       "type": "outdated_doc",
-      "severity": "high",
+      "severity": "low",
       "title": "문서에 반영되지 않은 구현 기능",
       "documentEvidence": "문서에서 확인된 누락 또는 오래된 설명",
       "codeEvidence": "구현 근거",

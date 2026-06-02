@@ -167,6 +167,9 @@ Rules:
 - Phrase absence as "수집·분석된 코드 범위에서 구현 근거를 확인하지 못했습니다" when code evidence is missing.
 - The final confidence is recalculated by code from five factors: document evidence, code evidence, two-agent agreement, verifiable locations, and concrete recommendation.
 - Still return a confidence number for schema compatibility, but prioritize filling evidence fields accurately over estimating confidence.
+- Prefer high confidence only when both sides are specific.
+- If evidence is weak, lower confidence instead of inventing details.
+- Use only high or low severity.
 - Do not introduce requirements that are not present in the uploaded documents or code.
 - If there is no meaningful mismatch, return an empty findings array with a concise summary.
 - Keep recommendations practical.
@@ -211,6 +214,7 @@ export function buildReportWriterPrompt({
 - confidence는 최종 병합 코드가 문서 근거 25점, 코드 근거 25점, 두 분석 에이전트 합의 30점, 확인 가능한 위치 10점, 구체적 권장 조치 10점 기준으로 다시 산출한다.
 - Report Agent는 confidence 숫자를 임의로 보정하지 말고, 위 계산에 필요한 근거 필드와 합의 여부를 보존한다.
 - 두 결과가 충돌하면 확정 표현을 피하고 recommendation에 충돌/확인 필요를 명시한다.
+- severity는 high 또는 low만 사용한다.
 - ${comparisonBasis === "code_latest" ? "code_latest에서는 outdated_doc만 최종 finding으로 남긴다." : ""}
 - ${comparisonBasis === "document_latest" ? "document_latest에서는 missing_feature와 api_mismatch만 최종 finding으로 남긴다." : ""}
 - 모든 출력은 한국어 JSON으로 작성한다.
@@ -417,7 +421,7 @@ ${document.content}
 
 function formatDetectionDocs(detectionDocs: LoadedDetectionDoc[]) {
   if (!detectionDocs.length) {
-    return "No detection standard document was loaded. Return an empty findings array unless the selected detection options explicitly allow a type.";
+    return "No detection standard document was loaded. Return an empty findings array unless the comparison-basis preset explicitly allows a type.";
   }
 
   return detectionDocs

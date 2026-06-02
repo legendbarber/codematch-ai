@@ -56,10 +56,9 @@ Input:
 - `comparisonBasis`: `document_latest`, `code_latest`, or `unknown`.
 - `openaiApiKey`: optional OpenAI API key for one request only.
 - `geminiApiKey`: optional Gemini API key for one request only.
-- `missingFeature`: boolean string.
-- `apiMismatch`: boolean string.
-- `outdatedDoc`: boolean string.
 - `documents`: uploaded document files.
+
+Detection types are not user-editable. The server applies the fixed preset for the selected `comparisonBasis`.
 
 Output:
 
@@ -110,7 +109,7 @@ Stores analysis metadata:
 - repository URL and owner/name
 - selected provider
 - comparison basis
-- options JSON
+- comparison-basis detection preset JSON
 - status
 - summary
 - totals JSON

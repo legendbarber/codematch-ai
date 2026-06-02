@@ -35,17 +35,12 @@ export async function POST(request: Request) {
   const legacyApiKey = normalizeApiKey(formData.get("apiKey"));
   const openaiApiKey = normalizeApiKey(formData.get("openaiApiKey")) ?? (provider === "openai" ? legacyApiKey : undefined);
   const geminiApiKey = normalizeApiKey(formData.get("geminiApiKey")) ?? (provider === "gemini" ? legacyApiKey : undefined);
-  const options = {
-    missingFeature: formData.get("missingFeature") !== "false",
-    apiMismatch: formData.get("apiMismatch") !== "false",
-    outdatedDoc: formData.get("outdatedDoc") !== "false",
-  };
-  const parsed = createAnalysisSchema.safeParse({ repoUrl, provider, comparisonBasis, options });
+  const parsed = createAnalysisSchema.safeParse({ repoUrl, provider, comparisonBasis });
 
   if (!parsed.success) {
     return NextResponse.json({ error: "분석 요청 형식이 올바르지 않습니다." }, { status: 400 });
   }
-  const normalizedOptions = normalizeOptionsForBasis(parsed.data.comparisonBasis, parsed.data.options);
+  const normalizedOptions = normalizeOptionsForBasis(parsed.data.comparisonBasis);
 
   let repoMeta: { owner: string; repo: string };
   try {

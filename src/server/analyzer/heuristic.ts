@@ -1,4 +1,5 @@
 import { extractEndpointLocations, extractEndpointSignals } from "../chunker";
+import { normalizeOptionsForBasis } from "../validation";
 import type {
   AnalysisOptions,
   AnalysisReport,
@@ -62,10 +63,10 @@ export function heuristicAnalyze({
   repository,
   documents,
   chunks,
-  options,
   comparisonBasis = "unknown",
   reason,
 }: HeuristicInput): AnalysisReport {
+  const options = normalizeOptionsForBasis(comparisonBasis);
   const documentChunks = documents.flatMap((document) => document.chunks);
   const docText = documentChunks.map((chunk) => chunk.text).join("\n").toLowerCase();
   const codeText = chunks.map((chunk) => chunk.text).join("\n").toLowerCase();
@@ -201,7 +202,7 @@ function findDocumentBaselineMissingFeatures(
     if (normalizedIncludes(codeText, candidate.name)) continue;
     findings.push({
       type: "missing_feature",
-      severity: "high",
+      severity: "low",
       title: `${humanizeSymbol(candidate.name)} 구현 근거 미확인`,
       documentEvidence: candidate.evidence,
       codeEvidence: `수집·분석된 코드 범위에서 ${candidate.name} 또는 같은 이름의 구현 symbol을 확인하지 못했습니다.`,

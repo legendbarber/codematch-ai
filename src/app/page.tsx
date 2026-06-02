@@ -164,24 +164,6 @@ const ACCEPTED_DOCUMENT_EXTENSIONS = [".md", ".markdown", ".txt", ".pdf", ".json
 const MAX_DOCUMENTS = 5;
 const EXAMPLE_ANALYSIS_ID = "example-northstar-retailops-wide";
 
-const OPTION_PRESETS: Record<ComparisonBasis, { missingFeature: boolean; apiMismatch: boolean; outdatedDoc: boolean }> = {
-  document_latest: {
-    missingFeature: true,
-    apiMismatch: true,
-    outdatedDoc: false,
-  },
-  code_latest: {
-    missingFeature: false,
-    apiMismatch: false,
-    outdatedDoc: true,
-  },
-  unknown: {
-    missingFeature: true,
-    apiMismatch: true,
-    outdatedDoc: true,
-  },
-};
-
 const DEMO_ANALYSIS: AnalysisDetail = {
   id: "demo-codematchaa-multi-agent-report",
   repoUrl: "https://github.com/legendbarber/codematch-ai",
@@ -511,14 +493,8 @@ export default function Home() {
   const [drafts, setDrafts] = useState<Record<string, DocumentationDraft>>({});
   const [draftLoading, setDraftLoading] = useState<Record<string, boolean>>({});
   const [draftErrors, setDraftErrors] = useState<Record<string, string>>({});
-  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
-  const [options, setOptions] = useState({
-    missingFeature: true,
-    apiMismatch: true,
-    outdatedDoc: true,
-  });
   const [history, setHistory] = useState<AnalysisSummary[]>([DEMO_ANALYSIS]);
   const [active, setActive] = useState<AnalysisDetail | null>(DEMO_ANALYSIS);
   const [submitting, setSubmitting] = useState(false);
@@ -556,7 +532,6 @@ export default function Home() {
 
   function handleComparisonBasisChange(nextBasis: ComparisonBasis) {
     setComparisonBasis(nextBasis);
-    setOptions(OPTION_PRESETS[nextBasis]);
   }
 
   async function loadInitialHistory() {
@@ -621,9 +596,6 @@ export default function Home() {
     formData.set("comparisonBasis", comparisonBasis);
     formData.set("openaiApiKey", openaiApiKey);
     formData.set("geminiApiKey", geminiApiKey);
-    formData.set("missingFeature", String(options.missingFeature));
-    formData.set("apiMismatch", String(options.apiMismatch));
-    formData.set("outdatedDoc", String(options.outdatedDoc));
     files.forEach((file) => formData.append("documents", file));
 
     try {
@@ -954,57 +926,6 @@ export default function Home() {
           <div className="secretNotice">
             <ShieldCheck size={18} />
             <span>입력한 API key는 분석 요청 1회에만 사용되며 DB에 저장하지 않습니다. 한 provider key만 있으면 같은 모델 분석 에이전트 2개를 실행하고, 두 key가 모두 있으면 OpenAI와 Gemini 분석 에이전트를 각각 실행합니다.</span>
-          </div>
-
-          <div className="advancedOptions">
-            <button
-              type="button"
-              className="advancedToggle"
-              onClick={() => setShowAdvancedOptions((value) => !value)}
-            >
-              <span>
-                <strong>탐지 유형</strong>
-                <small>{selectedOptionSummary(options)} · 분석 기준에 맞춰 자동 선택됨</small>
-              </span>
-              <ChevronDown size={18} className={showAdvancedOptions ? "open" : ""} />
-            </button>
-            {showAdvancedOptions ? (
-              <div className="checksRow">
-                <p>일반적으로는 바꾸지 않아도 됩니다. 특정 finding 유형만 제외하고 싶을 때 사용하세요.</p>
-                <div className="checks">
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={options.missingFeature}
-                      onChange={(event) =>
-                        setOptions((current) => ({ ...current, missingFeature: event.target.checked }))
-                      }
-                    />
-                    기능 누락
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={options.apiMismatch}
-                      onChange={(event) =>
-                        setOptions((current) => ({ ...current, apiMismatch: event.target.checked }))
-                      }
-                    />
-                    API 불일치
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={options.outdatedDoc}
-                      onChange={(event) =>
-                        setOptions((current) => ({ ...current, outdatedDoc: event.target.checked }))
-                      }
-                    />
-                    Outdated 문서
-                  </label>
-                </div>
-              </div>
-            ) : null}
           </div>
 
           {error ? <div className="errorBox">{error}</div> : null}
@@ -1690,15 +1611,6 @@ function basisLabel(value: ComparisonBasis) {
     unknown: "기준 모름",
   };
   return labels[value] ?? "기준 모름";
-}
-
-function selectedOptionSummary(options: { missingFeature: boolean; apiMismatch: boolean; outdatedDoc: boolean }) {
-  const selected = [
-    options.missingFeature ? "기능 누락" : null,
-    options.apiMismatch ? "API 불일치" : null,
-    options.outdatedDoc ? "Outdated 문서" : null,
-  ].filter(Boolean);
-  return selected.length ? selected.join(", ") : "선택된 유형 없음";
 }
 
 function formatCodeLocations(locations: AnalysisDetail["findings"][number]["codeLocations"]) {

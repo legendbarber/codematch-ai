@@ -31,6 +31,20 @@ describe("createAnalysisSchema comparisonBasis", () => {
     expect(parsed.comparisonBasis).toBe("unknown");
   });
 
+  it("fills internal detection options when the request omits them", () => {
+    const parsed = createAnalysisSchema.parse({
+      repoUrl: "https://github.com/acme/demo",
+      provider: "openai",
+      comparisonBasis: "document_latest",
+    });
+
+    expect(parsed.options).toEqual({
+      missingFeature: true,
+      apiMismatch: true,
+      outdatedDoc: true,
+    });
+  });
+
   it("rejects unknown comparison basis strings", () => {
     expect(() =>
       createAnalysisSchema.parse({
@@ -47,15 +61,25 @@ describe("createAnalysisSchema comparisonBasis", () => {
   });
 
   it("forces code_latest options to repository-only documentation gaps", () => {
-    expect(
-      normalizeOptionsForBasis("code_latest", {
-        missingFeature: true,
-        apiMismatch: true,
-        outdatedDoc: false,
-      }),
-    ).toEqual({
+    expect(normalizeOptionsForBasis("code_latest")).toEqual({
       missingFeature: false,
       apiMismatch: false,
+      outdatedDoc: true,
+    });
+  });
+
+  it("forces document_latest options to document-baseline checks", () => {
+    expect(normalizeOptionsForBasis("document_latest")).toEqual({
+      missingFeature: true,
+      apiMismatch: true,
+      outdatedDoc: false,
+    });
+  });
+
+  it("forces unknown options to all detection types", () => {
+    expect(normalizeOptionsForBasis("unknown")).toEqual({
+      missingFeature: true,
+      apiMismatch: true,
       outdatedDoc: true,
     });
   });

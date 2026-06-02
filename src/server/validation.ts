@@ -5,6 +5,12 @@ export const providerSchema = z.enum(["openai", "gemini"]);
 
 export const comparisonBasisSchema = z.enum(["document_latest", "code_latest", "unknown"]);
 
+const DEFAULT_ANALYSIS_OPTIONS: AnalysisOptions = {
+  missingFeature: true,
+  apiMismatch: true,
+  outdatedDoc: true,
+};
+
 export const analysisOptionsSchema = z.object({
   missingFeature: z.boolean().default(true),
   apiMismatch: z.boolean().default(true),
@@ -15,12 +21,11 @@ export const createAnalysisSchema = z.object({
   repoUrl: z.string().url().max(500),
   provider: providerSchema,
   comparisonBasis: comparisonBasisSchema.default("unknown"),
-  options: analysisOptionsSchema,
+  options: analysisOptionsSchema.default(DEFAULT_ANALYSIS_OPTIONS),
 });
 
 export function normalizeOptionsForBasis(
   comparisonBasis: ComparisonBasis,
-  options: AnalysisOptions,
 ): AnalysisOptions {
   if (comparisonBasis === "code_latest") {
     return {
@@ -33,10 +38,14 @@ export function normalizeOptionsForBasis(
   if (comparisonBasis === "document_latest") {
     return {
       missingFeature: true,
-      apiMismatch: options.apiMismatch,
+      apiMismatch: true,
       outdatedDoc: false,
     };
   }
 
-  return options;
+  return {
+    missingFeature: true,
+    apiMismatch: true,
+    outdatedDoc: true,
+  };
 }
