@@ -65,6 +65,7 @@ export function serializeAnalysis(analysis: AnalysisWithRelations) {
   const findings =
     analysis.findings?.map((finding) => ({
       ...finding,
+      severity: normalizeSeverity(finding.severity),
       relatedFiles: parseJson(finding.relatedFilesJson, []),
       documentLocation: parseJson(finding.documentLocationJson ?? null, {}),
       codeLocations: parseJson(finding.codeLocationsJson ?? null, []),
@@ -77,7 +78,7 @@ export function serializeAnalysis(analysis: AnalysisWithRelations) {
     ...analysis,
     comparisonBasis: analysis.comparisonBasis ?? "unknown",
     options: parseJson(analysis.optionsJson, {}),
-    totals: parseJson(analysis.totalsJson, defaultTotals()),
+    totals: normalizeTotals(parseJson(analysis.totalsJson, defaultTotals())),
     reportRecommendationSummary: createReportRecommendationSummary(findings),
     relatedFilesJson: undefined,
     optionsJson: undefined,
@@ -115,10 +116,24 @@ export function serializeAnalysisSummary(analysis: AnalysisWithRelations) {
     status: analysis.status,
     summary: analysis.summary,
     error: analysis.error,
-    totals: parseJson(analysis.totalsJson, defaultTotals()),
+    totals: normalizeTotals(parseJson(analysis.totalsJson, defaultTotals())),
     createdAt: analysis.createdAt.toISOString(),
     updatedAt: analysis.updatedAt.toISOString(),
     completedAt: analysis.completedAt?.toISOString() ?? null,
+  };
+}
+
+function normalizeSeverity(severity: string) {
+  return severity === "low" ? "low" : "high";
+}
+
+function normalizeTotals(totals: ReturnType<typeof defaultTotals> & { medium?: number }) {
+  const medium = typeof totals.medium === "number" ? totals.medium : 0;
+  const { medium: _medium, ...rest } = totals;
+  return {
+    ...rest,
+    high: totals.high + medium,
+    low: totals.low,
   };
 }
 
@@ -138,7 +153,6 @@ function defaultTotals() {
     apiMismatch: 0,
     outdatedDoc: 0,
     high: 0,
-    medium: 0,
     low: 0,
     scope: {
       collectedCodeFileCount: 0,

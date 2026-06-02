@@ -54,7 +54,7 @@
 
 모든 결과는 한국어로 작성하라.
 finding type은 missing_feature, api_mismatch, outdated_doc 중 하나만 사용하라.
-severity는 high, medium, low 중 하나만 사용하라.
+severity는 high, low 중 하나만 사용하라.
 확정할 수 없는 부재는 "수집·분석된 코드 범위에서 구현 근거를 확인하지 못했습니다"라고 표현하라.
 근거가 약하면 confidence를 낮추고 finding 대신 검토 메모로 남겨라.
 ```

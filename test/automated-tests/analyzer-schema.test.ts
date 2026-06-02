@@ -9,7 +9,7 @@ describe("filterReportByOptions", () => {
         findings: [
           {
             type: "api_mismatch",
-            severity: "medium",
+            severity: "high",
             title: "API differs",
             documentEvidence: "문서 API",
             codeEvidence: "코드 API",
@@ -19,7 +19,7 @@ describe("filterReportByOptions", () => {
           },
           {
             type: "outdated_doc",
-            severity: "medium",
+            severity: "high",
             title: "GET /tasks/:id/intervention-plan 문서 반영 필요",
             documentEvidence: "문서에 없음",
             codeEvidence: "코드에 있음",

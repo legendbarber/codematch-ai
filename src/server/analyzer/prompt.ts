@@ -296,7 +296,7 @@ export function selectCodeChunksForAnalysis(chunks: CodeChunk[], analysisPlan?: 
 }
 
 function buildCandidateMatchers(analysisPlan: AnalysisPlan) {
-  const priorityRank = { high: 0, medium: 1, low: 2 };
+  const priorityRank = { high: 0, low: 1 };
   return analysisPlan.targetAreas
     .flatMap((area) =>
       area.candidatePaths.map((candidatePath, index) => ({
@@ -340,7 +340,7 @@ function pathMatcher(candidatePath: string) {
 
 function scoreSupplementChunks(chunks: CodeChunk[], analysisPlan: AnalysisPlan) {
   const weightedTerms = analysisPlan.targetAreas.flatMap((area) => {
-    const weight = area.priority === "high" ? 3 : area.priority === "medium" ? 2 : 1;
+    const weight = area.priority === "high" ? 3 : 1;
     return tokenize(`${area.documentRequirement} ${area.reason}`).map((term) => ({ term, weight }));
   });
 

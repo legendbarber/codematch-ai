@@ -8,7 +8,7 @@
 {
   "comparisonBasis": ["document_latest", "code_latest", "unknown"],
   "findingType": ["missing_feature", "api_mismatch", "outdated_doc"],
-  "severity": ["high", "medium", "low"],
+  "severity": ["high", "low"],
   "mergeStatus": ["consensus", "needs_review", "disagreement", "excluded"]
 }
 ```
@@ -88,7 +88,7 @@
   "findings": [
     {
       "type": "outdated_doc",
-      "severity": "medium",
+      "severity": "high",
       "title": "문서에 반영되지 않은 구현 기능",
       "documentEvidence": "문서에서 확인된 누락 또는 오래된 설명",
       "codeEvidence": "구현 근거",

@@ -46,7 +46,6 @@ type Totals = {
   apiMismatch: number;
   outdatedDoc: number;
   high: number;
-  medium: number;
   low: number;
   scope?: {
     collectedCodeFileCount: number;
@@ -112,7 +111,7 @@ type AnalysisDetail = AnalysisSummary & {
   findings: Array<{
     id: string;
     type: "missing_feature" | "api_mismatch" | "outdated_doc";
-    severity: "high" | "medium" | "low";
+    severity: "high" | "low";
     title: string;
     documentEvidence: string;
     codeEvidence: string;
@@ -183,6 +182,325 @@ const OPTION_PRESETS: Record<ComparisonBasis, { missingFeature: boolean; apiMism
   },
 };
 
+const DEMO_ANALYSIS: AnalysisDetail = {
+  id: "demo-codematchaa-multi-agent-report",
+  repoUrl: "https://github.com/legendbarber/codematch-ai",
+  repoOwner: "legendbarber",
+  repoName: "codematch-ai",
+  provider: "openai",
+  comparisonBasis: "unknown",
+  status: "completed",
+  summary:
+    "Demo report for judges: CodeMatchAA compared the uploaded architecture/spec documents with the deployed repository and found 5 consistency risks across multi-agent orchestration, report evidence, and deployment configuration.",
+  error: null,
+  totals: {
+    total: 5,
+    missingFeature: 2,
+    apiMismatch: 1,
+    outdatedDoc: 2,
+    high: 4,
+    low: 1,
+    scope: {
+      collectedCodeFileCount: 38,
+      codeChunkCount: 126,
+      documentChunkCount: 34,
+      warnings: [
+        "Demo data is preloaded so first-time visitors can evaluate the finished report without running analysis.",
+      ],
+      githubTreeTruncated: false,
+      highlightMappingFailures: 0,
+    },
+  },
+  createdAt: "2026-05-30T05:40:00.000Z",
+  completedAt: "2026-05-30T05:43:18.000Z",
+  documents: [
+    {
+      id: "demo-doc-architecture",
+      name: "architecture.png",
+      mimeType: "image/png",
+      size: 1190421,
+      extractedChars: 1840,
+    },
+    {
+      id: "demo-doc-system-design",
+      name: "docs/system-design.md",
+      mimeType: "text/markdown",
+      size: 18240,
+      extractedChars: 12860,
+    },
+    {
+      id: "demo-doc-output-contracts",
+      name: "multi-agent-docs/output-contracts.md",
+      mimeType: "text/markdown",
+      size: 9130,
+      extractedChars: 7210,
+    },
+  ],
+  steps: [
+    {
+      id: "demo-step-plan",
+      key: "plan",
+      label: "Planning agent scoped repository and documents",
+      status: "completed",
+      message: "Selected multi-agent workflow, detection rules, and evidence collection range.",
+      durationMs: 21000,
+    },
+    {
+      id: "demo-step-collect",
+      key: "collect",
+      label: "GitHub code and document chunks collected",
+      status: "completed",
+      message: "Collected Next.js routes, analyzer modules, deployment scripts, and reference docs.",
+      durationMs: 34000,
+    },
+    {
+      id: "demo-step-parallel",
+      key: "parallel-analysis",
+      label: "Two analysis agents ran in parallel",
+      status: "completed",
+      message: "Both agents checked missing features, API mismatches, outdated docs, and confidence.",
+      durationMs: 78000,
+    },
+    {
+      id: "demo-step-report",
+      key: "report-agent",
+      label: "Report agent merged and de-duplicated findings",
+      status: "completed",
+      message: "Cross-validated duplicate findings and produced priority recommendations.",
+      durationMs: 41000,
+    },
+    {
+      id: "demo-step-store",
+      key: "store",
+      label: "Report metadata stored for Supabase-backed review",
+      status: "completed",
+      message: "Stored summary, findings, evidence locations, and generated report actions.",
+      durationMs: 18000,
+    },
+  ],
+  findings: [
+    {
+      id: "demo-finding-planner",
+      type: "missing_feature",
+      severity: "high",
+      title: "Architecture requires a planning agent, but runtime path still behaves like a single analyzer entry point",
+      documentEvidence:
+        "The architecture diagram defines step 1 as a Planning Agent that selects target areas, priorities, detection strategy, and evidence scope before analysis starts.",
+      codeEvidence:
+        "src/server/analysis-runner.ts invokes the analyzer directly after collection. Planning prompts exist, but the persisted step model does not expose a separate planning result object for the report agent to verify.",
+      relatedFiles: [
+        "src/server/analysis-runner.ts",
+        "src/server/analyzer/index.ts",
+        "multi-agent-docs/agents/analysis-planner-agent.md",
+      ],
+      documentLocation: {
+        documentName: "architecture.png",
+        pageNumber: 1,
+        matchedText: "Planning Agent: analysis target area, priority, detection strategy, evidence collection scope",
+        highlightStatus: "created",
+      },
+      codeLocations: [
+        {
+          path: "src/server/analysis-runner.ts",
+          symbolName: "runAnalysis",
+          startLine: 78,
+          endLine: 156,
+        },
+        {
+          path: "src/server/analyzer/index.ts",
+          symbolName: "analyzeRepositoryAgainstDocuments",
+          startLine: 30,
+          endLine: 138,
+        },
+      ],
+      recommendation:
+        "Persist a planning_result payload with selected detection types, target directories, and evidence scope, then pass that object to each analysis agent and display it in the final report.",
+      confidence: 0.91,
+    },
+    {
+      id: "demo-finding-parallel",
+      type: "missing_feature",
+      severity: "high",
+      title: "Parallel analysis agents are documented, but the report should show agent A/B agreement",
+      documentEvidence:
+        "Step 2 in the architecture shows Analysis Agent #1 and Analysis Agent #2 running the same role concurrently and producing Analysis Result A and B.",
+      codeEvidence:
+        "The current report model stores a unified findings array. It does not preserve which agent produced each finding or whether another agent confirmed, contradicted, or merged it.",
+      relatedFiles: [
+        "src/server/analyzer/schema.ts",
+        "src/server/types.ts",
+        "multi-agent-docs/multi-agent-workflow.md",
+      ],
+      documentLocation: {
+        documentName: "architecture.png",
+        pageNumber: 1,
+        matchedText: "Analysis Agent x 2, same role, concurrent analysis, Analysis Result A / B",
+        highlightStatus: "created",
+      },
+      codeLocations: [
+        {
+          path: "src/server/analyzer/schema.ts",
+          symbolName: "analysisFindingSchema",
+          startLine: 1,
+          endLine: 96,
+        },
+        {
+          path: "src/server/types.ts",
+          symbolName: "AnalysisFinding",
+          startLine: 16,
+          endLine: 54,
+        },
+      ],
+      recommendation:
+        "Add agentSource, corroborationStatus, and mergeRationale fields so judges can see which issues were independently confirmed by both analysis agents.",
+      confidence: 0.88,
+    },
+    {
+      id: "demo-finding-api",
+      type: "api_mismatch",
+      severity: "high",
+      title: "Report API is session-scoped, so seeded Supabase rows do not automatically appear for new judges",
+      documentEvidence:
+        "The final output is expected to show a completed consistency analysis report containing summary, detected issues, evidence, severity, confidence, and recommendations.",
+      codeEvidence:
+        "GET /api/analyses filters rows by the anonymous session cookie. A judge with a fresh browser receives an empty history unless the UI preloads a public demo report.",
+      relatedFiles: ["src/app/api/analyses/route.ts", "src/app/api/analyses/[id]/route.ts", "src/app/page.tsx"],
+      documentLocation: {
+        documentName: "architecture.png",
+        pageNumber: 1,
+        matchedText: "Final output: consistency analysis report",
+        highlightStatus: "created",
+      },
+      codeLocations: [
+        {
+          path: "src/app/api/analyses/route.ts",
+          symbolName: "GET",
+          startLine: 11,
+          endLine: 27,
+          endpoint: {
+            method: "GET",
+            path: "/api/analyses",
+          },
+        },
+        {
+          path: "src/app/api/analyses/[id]/route.ts",
+          symbolName: "GET",
+          startLine: 15,
+          endLine: 51,
+          endpoint: {
+            method: "GET",
+            path: "/api/analyses/:id",
+          },
+        },
+      ],
+      recommendation:
+        "Keep user analyses session-scoped, but ship a public demo analysis object in the client so the deployed site always opens with a complete report.",
+      confidence: 0.95,
+    },
+    {
+      id: "demo-finding-docs",
+      type: "outdated_doc",
+      severity: "high",
+      title: "Deployment docs mention GCP and Supabase, but do not describe the default judge demo state",
+      documentEvidence:
+        "The architecture and deployment flow imply that evaluators should inspect a final report, not necessarily execute a live analysis with API keys and uploaded documents.",
+      codeEvidence:
+        "README and deployment docs focus on running analysis and configuring environment variables. They do not document that the production page can show a preloaded demo report.",
+      relatedFiles: ["README.md", "docs/deployment-gcp.md", "docs/supabase-stored-data.md"],
+      documentLocation: {
+        documentName: "docs/deployment-gcp.md",
+        matchedText: "Deploy to Google Cloud Run and configure DATABASE_URL / DIRECT_URL.",
+        highlightStatus: "not_applicable",
+      },
+      codeLocations: [
+        {
+          path: "docs/deployment-gcp.md",
+          startLine: 1,
+          endLine: 80,
+        },
+        {
+          path: "README.md",
+          startLine: 1,
+          endLine: 110,
+        },
+      ],
+      recommendation:
+        "Add a short evaluator note explaining that production starts with a static demo report while real user analyses remain private per session.",
+      confidence: 0.82,
+    },
+    {
+      id: "demo-finding-evidence",
+      type: "outdated_doc",
+      severity: "low",
+      title: "Output contract should explicitly name architecture-image evidence handling",
+      documentEvidence:
+        "The uploaded architecture image is a visual spec, and its labels define core workflow requirements for the upgraded CodeMatchAA system.",
+      codeEvidence:
+        "The document upload path supports PDF, markdown, text, JSON, and YAML, while this demo treats the architecture PNG as review evidence for presentation.",
+      relatedFiles: ["src/app/page.tsx", "src/app/api/analyses/route.ts", "multi-agent-docs/output-contracts.md"],
+      documentLocation: {
+        documentName: "architecture.png",
+        pageNumber: 1,
+        matchedText: "CodeMatch AI multi-agent analysis architecture",
+        highlightStatus: "created",
+      },
+      codeLocations: [
+        {
+          path: "src/app/page.tsx",
+          symbolName: "ACCEPTED_DOCUMENT_EXTENSIONS",
+          startLine: 169,
+          endLine: 169,
+        },
+        {
+          path: "multi-agent-docs/output-contracts.md",
+          startLine: 1,
+          endLine: 96,
+        },
+      ],
+      recommendation:
+        "Clarify whether image-based architecture artifacts are supported input, demo-only evidence, or should be converted to markdown before analysis.",
+      confidence: 0.74,
+    },
+  ],
+  artifacts: [],
+  documentationDrafts: [
+    {
+      id: "demo-draft-planner",
+      findingId: "demo-finding-planner",
+      createdAt: "2026-05-30T05:43:18.000Z",
+      draft: {
+        suggestedSection: "Architecture / Planning Agent",
+        suggestedTitle: "Persisted Planning Result Contract",
+        body:
+          "Before analysis agents run, CodeMatchAA should persist a planning_result object containing selected target directories, enabled detection types, priority rules, and evidence collection scope. Each analysis agent receives this object, and the report agent includes it in the final review trail.",
+        supportingCodeLocations: [
+          {
+            path: "src/server/analysis-runner.ts",
+            symbolName: "runAnalysis",
+            startLine: 78,
+            endLine: 156,
+          },
+        ],
+        reviewNotes: ["Use this as the acceptance contract for the upgraded multi-agent implementation."],
+      },
+    },
+  ],
+  reportRecommendationSummary: {
+    headline:
+      "Prioritize the two high-severity multi-agent gaps first: persisted planning output and visible A/B agent corroboration.",
+    priorityActions: [
+      "Persist and display planning_result before running analysis agents.",
+      "Track agent A/B source, agreement, and merge rationale on each finding.",
+      "Document the public demo report behavior for evaluators while keeping real analyses session-private.",
+    ],
+    reviewFocus: ["Planning Agent", "Parallel Analysis", "Session-scoped Supabase history", "Report Agent merge logic"],
+  },
+};
+
+function isDemoAnalysisId(id: string) {
+  return id === DEMO_ANALYSIS.id;
+}
+
 export default function Home() {
   const [repoUrl, setRepoUrl] = useState("");
   const [provider, setProvider] = useState<Provider>("openai");
@@ -201,8 +519,8 @@ export default function Home() {
     apiMismatch: true,
     outdatedDoc: true,
   });
-  const [history, setHistory] = useState<AnalysisSummary[]>([]);
-  const [active, setActive] = useState<AnalysisDetail | null>(null);
+  const [history, setHistory] = useState<AnalysisSummary[]>([DEMO_ANALYSIS]);
+  const [active, setActive] = useState<AnalysisDetail | null>(DEMO_ANALYSIS);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -257,11 +575,18 @@ export default function Home() {
     const response = await fetch("/api/analyses", { cache: "no-store" });
     const payload = await response.json();
     if (response.ok) {
-      setHistory(payload.analyses);
+      const analyses = payload.analyses as AnalysisSummary[];
+      setHistory([DEMO_ANALYSIS, ...analyses.filter((analysis) => !isDemoAnalysisId(analysis.id))]);
     }
   }
 
   async function loadAnalysis(id: string) {
+    if (isDemoAnalysisId(id)) {
+      setActive(DEMO_ANALYSIS);
+      scrollToReport();
+      return;
+    }
+
     const response = await fetch(`/api/analyses/${id}`, { cache: "no-store" });
     const payload = await response.json();
     if (response.ok) {
@@ -750,7 +1075,6 @@ export default function Home() {
           <Metric icon={<Code2 />} label="API 불일치" value={active?.totals.apiMismatch ?? 0} tone="purple" />
           <Metric icon={<FileText />} label="Outdated 문서" value={active?.totals.outdatedDoc ?? 0} tone="blue" />
           <Metric icon={<Flag />} label="High" value={active?.totals.high ?? 0} tone="red" />
-          <Metric icon={<Flag />} label="Medium" value={active?.totals.medium ?? 0} tone="orange" />
           <Metric icon={<Flag />} label="Low" value={active?.totals.low ?? 0} tone="green" />
         </div>
 
@@ -1472,7 +1796,6 @@ function buildReportMarkdown(analysis: AnalysisDetail) {
     `- API 불일치: ${analysis.totals.apiMismatch}`,
     `- Outdated 문서: ${analysis.totals.outdatedDoc}`,
     `- High: ${analysis.totals.high}`,
-    `- Medium: ${analysis.totals.medium}`,
     `- Low: ${analysis.totals.low}`,
     `- 수집된 코드 파일 수: ${analysis.totals.scope?.collectedCodeFileCount ?? 0}`,
     `- 코드 청크 수: ${analysis.totals.scope?.codeChunkCount ?? 0}`,
@@ -1947,7 +2270,6 @@ function buildPrintableReportHtml(analysis: AnalysisDetail) {
         </div>
         <div class="metrics">
           ${printMetric("High", analysis.totals.high, "red")}
-          ${printMetric("Medium", analysis.totals.medium, "orange")}
           ${printMetric("Low", analysis.totals.low, "green")}
           ${printMetric("Finding", analysis.findings.length, "blue")}
         </div>
@@ -2042,7 +2364,7 @@ function printFindingsHtml(analysis: AnalysisDetail) {
 
   return analysis.findings
     .map((finding, index) => {
-      const severityClass = finding.severity === "high" ? "danger" : finding.severity === "medium" ? "warn" : "";
+      const severityClass = finding.severity === "high" ? "danger" : "";
       return `<article class="finding ${escapeAttribute(finding.severity)}">
         <div class="findingHead">
           <h3>${index + 1}. ${escapeHtml(finding.title)}</h3>

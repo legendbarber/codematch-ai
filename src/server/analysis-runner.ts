@@ -367,7 +367,6 @@ function computeTotals(findings: ReportFinding[]) {
     apiMismatch: findings.filter((finding) => finding.type === "api_mismatch").length,
     outdatedDoc: findings.filter((finding) => finding.type === "outdated_doc").length,
     high: findings.filter((finding) => finding.severity === "high").length,
-    medium: findings.filter((finding) => finding.severity === "medium").length,
     low: findings.filter((finding) => finding.severity === "low").length,
   };
 }

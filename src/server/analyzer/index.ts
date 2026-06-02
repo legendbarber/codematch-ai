@@ -96,7 +96,7 @@ function createFallbackAnalysisPlan(input: Omit<AnalyzeInput, "analysisPlan">, r
       const candidatePaths = rankCandidatePaths(requirement, candidateFiles).slice(0, 8);
       return {
         id: `area-${index + 1}`,
-        priority: index < 3 ? "high" : index < 6 ? "medium" : "low",
+        priority: index < 6 ? "high" : "low",
         documentRequirement: requirement || `${chunk.documentName} chunk ${chunk.index + 1}`,
         candidatePaths,
         detectionTypes,
@@ -111,7 +111,7 @@ function createFallbackAnalysisPlan(input: Omit<AnalyzeInput, "analysisPlan">, r
   if (!targetAreas.length) {
     targetAreas.push({
       id: "area-1",
-      priority: "medium",
+      priority: "high",
       documentRequirement: "업로드 문서 전체 요구사항",
       candidatePaths: candidateFiles.slice(0, 12),
       detectionTypes,
@@ -450,7 +450,7 @@ function findingMatchesBasis(finding: ReportFinding, input: AnalyzeInput) {
 }
 
 function compareFindings(a: ReportFinding, b: ReportFinding) {
-  const severityRank = { high: 0, medium: 1, low: 2 };
+  const severityRank = { high: 0, low: 1 };
   const consensusRank = (finding: ReportFinding) =>
     finding.recommendation.includes("멀티 에이전트 합의") ||
     finding.recommendation.includes("분석 에이전트-정적 검증 일치")

@@ -80,7 +80,7 @@ export function heuristicAnalyze({
       if (documentMentions && !codeMentions) {
         findings.push({
           type: "missing_feature",
-          severity: feature.label === "로그인" || feature.label === "회원가입" ? "medium" : "low",
+          severity: feature.label === "로그인" || feature.label === "회원가입" ? "high" : "low",
           title: `${feature.label} 구현 흔적 부족`,
           documentEvidence: `${feature.label} 관련 요구가 문서에 언급되어 있습니다.`,
           codeEvidence: `수집된 ${repository.files.length}개 파일에서 ${feature.label} 관련 명확한 구현 키워드를 찾지 못했습니다.`,
@@ -175,7 +175,7 @@ function findDocumentBaselineMissingFeatures(
     if (codeEndpointSet.has(normalizeEndpoint(candidate.endpoint))) continue;
     findings.push({
       type: "missing_feature",
-      severity: "medium",
+      severity: "high",
       title: `${candidate.endpoint} 코드 반영 근거 미확인`,
       documentEvidence: candidate.evidence,
       codeEvidence: `수집·분석된 ${repository.files.length}개 코드 파일 범위에서 ${candidate.endpoint} 구현 근거를 확인하지 못했습니다.`,
@@ -201,7 +201,7 @@ function findDocumentBaselineMissingFeatures(
     if (normalizedIncludes(codeText, candidate.name)) continue;
     findings.push({
       type: "missing_feature",
-      severity: "medium",
+      severity: "high",
       title: `${humanizeSymbol(candidate.name)} 구현 근거 미확인`,
       documentEvidence: candidate.evidence,
       codeEvidence: `수집·분석된 코드 범위에서 ${candidate.name} 또는 같은 이름의 구현 symbol을 확인하지 못했습니다.`,
@@ -234,7 +234,7 @@ function findCodeBaselineUndocumentedFeatures(documents: ParsedDocument[], chunk
     if (normalizedIncludes(documentText, location.endpoint?.path ?? endpoint)) continue;
     findings.push({
       type: "outdated_doc",
-      severity: "medium",
+      severity: "high",
       title: `${endpoint} 문서 반영 필요`,
       documentEvidence: "업로드된 문서에서 해당 endpoint 또는 기능 설명을 찾지 못했습니다.",
       codeEvidence: codeEvidenceForLocation(chunks, location),

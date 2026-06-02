@@ -1079,11 +1079,6 @@ h2 {
   background: #ffe9e9;
 }
 
-.severity.medium {
-  color: var(--orange);
-  background: #fff2df;
-}
-
 .severity.low {
   color: var(--green);
   background: #e8f8ef;

@@ -248,7 +248,7 @@ const geminiResponseSchema = {
           },
           severity: {
             type: "STRING",
-            enum: ["high", "medium", "low"],
+            enum: ["high", "low"],
           },
           title: { type: "STRING" },
           documentEvidence: { type: "STRING" },
@@ -324,7 +324,7 @@ const geminiPlanResponseSchema = {
         ],
         properties: {
           id: { type: "STRING" },
-          priority: { type: "STRING", enum: ["high", "medium", "low"] },
+          priority: { type: "STRING", enum: ["high", "low"] },
           documentRequirement: { type: "STRING" },
           candidatePaths: {
             type: "ARRAY",

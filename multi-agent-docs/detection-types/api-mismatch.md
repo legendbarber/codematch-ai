@@ -39,10 +39,6 @@
 - 필수 request/response field가 달라 클라이언트 연동이 깨지는 경우.
 - 인증/권한 조건, 상태 코드, 에러 처리 차이가 보안 또는 핵심 흐름에 영향을 주는 경우.
 
-`medium`:
-
-- 일부 field 이름, optional/required 여부, pagination/filtering 방식 차이처럼 부분 연동 오류 가능성이 있는 경우.
-- 문서 예시와 실제 schema가 다르지만 핵심 호출은 가능한 경우.
 
 `low`:
 

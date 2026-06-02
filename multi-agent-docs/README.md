@@ -26,7 +26,7 @@
 ## 적용 원칙
 
 - 탐지 유형 이름은 현재 코드와 호환되도록 `missing_feature`, `api_mismatch`, `outdated_doc`만 사용한다.
-- 심각도는 현재 코드와 호환되도록 `high`, `medium`, `low`만 사용한다.
+- 심각도는 현재 코드와 호환되도록 `high`, `low`만 사용한다.
 - 기준본은 현재 앱의 `document_latest`, `code_latest`, `unknown` 의미를 유지한다.
 - 모든 finding은 문서 근거와 코드 근거 중 최소 하나 이상의 구체 위치를 포함해야 한다.
 - 근거가 부족한 추론은 최종 리포트에서 확정 표현이 아니라 추가 검토 대상으로 표시한다.

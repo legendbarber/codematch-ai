@@ -33,7 +33,7 @@ const documentLocationSchema = z.object({
 
 export const reportFindingSchema = z.object({
   type: z.enum(["missing_feature", "api_mismatch", "outdated_doc"]),
-  severity: z.enum(["high", "medium", "low"]),
+  severity: z.enum(["high", "low"]),
   title: z.string().min(2).max(140),
   documentEvidence: z.string().min(1).max(1200),
   codeEvidence: z.string().min(1).max(1200),
@@ -63,7 +63,7 @@ export const analysisPlanSchema = z.object({
     .array(
       z.object({
         id: z.string().min(1).max(80),
-        priority: z.enum(["high", "medium", "low"]),
+        priority: z.enum(["high", "low"]),
         documentRequirement: z.string().min(1).max(800),
         candidatePaths: z.array(z.string().min(1).max(400)).max(12),
         detectionTypes: z.array(z.enum(["missing_feature", "api_mismatch", "outdated_doc"])).max(3),
@@ -104,7 +104,7 @@ export const reportJsonSchema = {
             type: "string",
             enum: ["missing_feature", "api_mismatch", "outdated_doc"],
           },
-          severity: { type: "string", enum: ["high", "medium", "low"] },
+          severity: { type: "string", enum: ["high", "low"] },
           title: { type: "string" },
           documentEvidence: { type: "string" },
           codeEvidence: { type: "string" },
@@ -189,7 +189,7 @@ export const analysisPlanJsonSchema = {
         ],
         properties: {
           id: { type: "string" },
-          priority: { type: "string", enum: ["high", "medium", "low"] },
+          priority: { type: "string", enum: ["high", "low"] },
           documentRequirement: { type: "string" },
           candidatePaths: {
             type: "array",

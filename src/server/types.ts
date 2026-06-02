@@ -9,7 +9,7 @@ export type ComparisonBasis = "document_latest" | "code_latest" | "unknown";
 
 export type FindingType = "missing_feature" | "api_mismatch" | "outdated_doc";
 
-export type Severity = "high" | "medium" | "low";
+export type Severity = "high" | "low";
 
 export type AnalysisStatus =
   | "queued"

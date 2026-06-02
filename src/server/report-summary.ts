@@ -20,7 +20,6 @@ export function createReportRecommendationSummary(
   findings: SerializableFinding[],
 ): ReportRecommendationSummary {
   const highCount = findings.filter((finding) => finding.severity === "high").length;
-  const mediumCount = findings.filter((finding) => finding.severity === "medium").length;
   const topFindings = [...findings].sort(compareFindingPriority).slice(0, 3);
 
   if (findings.length === 0) {
@@ -36,7 +35,7 @@ export function createReportRecommendationSummary(
   }
 
   return {
-    headline: `${findings.length}개의 정합성 의심 항목이 발견되었습니다. High ${highCount}건, Medium ${mediumCount}건을 먼저 처리하세요.`,
+    headline: `${findings.length}개의 정합성 의심 항목이 발견되었습니다. High ${highCount}건을 먼저 처리하세요.`,
     priorityActions: topFindings.map((finding, index) => {
       const prefix = `${index + 1}. ${typeLabel(finding.type)} / ${severityLabel(finding.severity)}`;
       return `${prefix}: ${finding.recommendation}`;
@@ -57,7 +56,6 @@ function compareFindingPriority(a: SerializableFinding, b: SerializableFinding) 
 function severityRank(severity: string) {
   const ranks: Record<Severity, number> = {
     high: 3,
-    medium: 2,
     low: 1,
   };
   return ranks[severity as Severity] ?? 0;
@@ -66,7 +64,6 @@ function severityRank(severity: string) {
 function severityLabel(severity: string) {
   const labels: Record<Severity, string> = {
     high: "높은 우선순위",
-    medium: "중간 우선순위",
     low: "낮은 우선순위",
   };
   return labels[severity as Severity] ?? severity;
