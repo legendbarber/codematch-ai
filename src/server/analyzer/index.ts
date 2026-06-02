@@ -263,18 +263,13 @@ function mergeAgentReports(agentReports: AnalysisAgentResult[], input: AnalyzeIn
 
   const findings = [...groups.values()]
     .map((items) => {
-      const best = [...items].sort((a, b) => b.finding.confidence - a.finding.confidence)[0];
+      const best = [...items].sort((a, b) => scoreFindingEvidence(b.finding) - scoreFindingEvidence(a.finding))[0];
       const supportingAgents = unique(items.map((item) => item.agent.agentId));
       const providers = unique(items.map((item) => item.agent.provider));
       const modelAgentCount = items.filter((item) => item.agent.provider !== "static_validation").length;
       const staticValidationCount = items.filter((item) => item.agent.provider === "static_validation").length;
       const isModelConsensus = modelAgentCount >= 2;
       const isCrossSourceAgreement = modelAgentCount >= 1 && staticValidationCount >= 1;
-      const adjustedConfidence = isModelConsensus
-        ? Math.min(0.95, Math.max(...items.map((item) => item.finding.confidence)) + 0.05)
-        : isCrossSourceAgreement
-          ? Math.min(0.8, Math.max(...items.map((item) => item.finding.confidence)) + 0.03)
-          : Math.min(staticValidationCount > 0 && modelAgentCount === 0 ? 0.6 : 0.65, best.finding.confidence);
       const mergeLabel = isModelConsensus
         ? `멀티 에이전트 합의: ${supportingAgents.join(", ")}`
         : isCrossSourceAgreement
@@ -282,7 +277,7 @@ function mergeAgentReports(agentReports: AnalysisAgentResult[], input: AnalyzeIn
           : `추가 검토 필요: ${supportingAgents[0]} 단독 제기`;
       return {
         ...best.finding,
-        confidence: roundConfidence(adjustedConfidence),
+        confidence: calculateConfidenceScore(best.finding, items),
         recommendation: `${mergeLabel}. ${best.finding.recommendation}`,
         codeEvidence:
           providers.includes("heuristic") && !isModelConsensus
@@ -320,7 +315,7 @@ function normalizeReportWriterOutput(report: AnalysisReport, input: ReportWriter
       if (!matched) {
         return {
           ...finding,
-          confidence: Math.min(0.65, finding.confidence),
+          confidence: calculateConfidenceScore(finding, []),
           recommendation: finding.recommendation.includes("추가 검토 필요")
             ? finding.recommendation
             : `추가 검토 필요: 문서 작성 에이전트가 단독으로 병합한 항목입니다. ${finding.recommendation}`,
@@ -332,7 +327,7 @@ function normalizeReportWriterOutput(report: AnalysisReport, input: ReportWriter
         finding.recommendation.includes("추가 검토 필요");
       return {
         ...finding,
-        confidence: Math.min(finding.confidence, matched.confidence),
+        confidence: matched.confidence,
         recommendation: hasMergeLabel ? finding.recommendation : matched.recommendation,
       } satisfies ReportFinding;
     })
@@ -461,6 +456,72 @@ function compareFindings(a: ReportFinding, b: ReportFinding) {
     severityRank[a.severity] - severityRank[b.severity] ||
     b.confidence - a.confidence
   );
+}
+
+function calculateConfidenceScore(
+  finding: ReportFinding,
+  items: Array<{ finding: ReportFinding; agent: AnalysisAgentResult }>,
+) {
+  const score =
+    (hasDocumentEvidence(finding) ? 25 : 0) +
+    (hasCodeEvidence(finding) ? 25 : 0) +
+    (hasModelAgentConsensus(items) ? 30 : 0) +
+    (hasVerifiableLocation(finding) ? 10 : 0) +
+    (hasConcreteRecommendation(finding) ? 10 : 0);
+
+  return roundConfidence(score / 100);
+}
+
+function scoreFindingEvidence(finding: ReportFinding) {
+  return (
+    (hasDocumentEvidence(finding) ? 25 : 0) +
+    (hasCodeEvidence(finding) ? 25 : 0) +
+    (hasVerifiableLocation(finding) ? 10 : 0) +
+    (hasConcreteRecommendation(finding) ? 10 : 0)
+  );
+}
+
+function hasModelAgentConsensus(items: Array<{ finding: ReportFinding; agent: AnalysisAgentResult }>) {
+  return unique(items.filter((item) => item.agent.provider !== "static_validation").map((item) => item.agent.agentId)).length >= 2;
+}
+
+function hasDocumentEvidence(finding: ReportFinding) {
+  return Boolean(
+    hasMeaningfulText(finding.documentEvidence) ||
+      hasMeaningfulText(finding.documentLocation?.matchedText) ||
+      finding.documentLocation?.pageNumber ||
+      hasMeaningfulText(finding.documentLocation?.documentName),
+  );
+}
+
+function hasCodeEvidence(finding: ReportFinding) {
+  return Boolean(
+    hasMeaningfulText(finding.codeEvidence) ||
+      finding.relatedFiles.length > 0 ||
+      Boolean(finding.codeLocations?.length),
+  );
+}
+
+function hasVerifiableLocation(finding: ReportFinding) {
+  return Boolean(
+    finding.documentLocation?.pageNumber ||
+      hasMeaningfulText(finding.documentLocation?.matchedText) ||
+      finding.codeLocations?.some(
+        (location) =>
+          hasMeaningfulText(location.path) ||
+          hasMeaningfulText(location.symbolName) ||
+          Boolean(location.startLine) ||
+          Boolean(location.endpoint),
+      ),
+  );
+}
+
+function hasConcreteRecommendation(finding: ReportFinding) {
+  return hasMeaningfulText(finding.recommendation) && finding.recommendation.trim().length >= 20;
+}
+
+function hasMeaningfulText(value?: string | null) {
+  return Boolean(value && value.trim().length >= 8);
 }
 
 function roundConfidence(value: number) {

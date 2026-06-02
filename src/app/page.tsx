@@ -315,7 +315,7 @@ const DEMO_ANALYSIS: AnalysisDetail = {
       ],
       recommendation:
         "Persist a planning_result payload with selected detection types, target directories, and evidence scope, then pass that object to each analysis agent and display it in the final report.",
-      confidence: 0.91,
+      confidence: 1,
     },
     {
       id: "demo-finding-parallel",
@@ -353,7 +353,7 @@ const DEMO_ANALYSIS: AnalysisDetail = {
       ],
       recommendation:
         "Add agentSource, corroborationStatus, and mergeRationale fields so judges can see which issues were independently confirmed by both analysis agents.",
-      confidence: 0.88,
+      confidence: 1,
     },
     {
       id: "demo-finding-api",
@@ -395,7 +395,7 @@ const DEMO_ANALYSIS: AnalysisDetail = {
       ],
       recommendation:
         "Keep user analyses session-scoped, but ship a public demo analysis object in the client so the deployed site always opens with a complete report.",
-      confidence: 0.95,
+      confidence: 0.7,
     },
     {
       id: "demo-finding-docs",
@@ -426,7 +426,7 @@ const DEMO_ANALYSIS: AnalysisDetail = {
       ],
       recommendation:
         "Add a short evaluator note explaining that production starts with a static demo report while real user analyses remain private per session.",
-      confidence: 0.82,
+      confidence: 0.7,
     },
     {
       id: "demo-finding-evidence",
@@ -459,7 +459,7 @@ const DEMO_ANALYSIS: AnalysisDetail = {
       ],
       recommendation:
         "Clarify whether image-based architecture artifacts are supported input, demo-only evidence, or should be converted to markdown before analysis.",
-      confidence: 0.74,
+      confidence: 0.7,
     },
   ],
   artifacts: [],

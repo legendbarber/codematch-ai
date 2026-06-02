@@ -83,3 +83,15 @@ severity는 high, low 중 하나만 사용하라.
 위 입력을 기준으로 finding 후보를 JSON 계약에 맞게 작성하라.
 각 finding은 문서 근거, 코드 근거, 위치, 추천 조치, confidence를 포함해야 한다.
 ```
+
+## Current confidence scoring
+
+Current code recalculates final confidence after report merging. This rule overrides older cap-based confidence notes.
+
+- Document evidence: 25 points.
+- Code evidence: 25 points.
+- Same finding found by two analysis agents: 30 points.
+- Verifiable document or code location: 10 points.
+- Concrete recommendation: 10 points.
+
+The final report displays the total score as a percentage.

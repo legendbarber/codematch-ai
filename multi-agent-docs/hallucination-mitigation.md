@@ -59,3 +59,15 @@ finding은 다음 중 최소 하나의 구체 위치를 포함해야 한다.
 - 같은 endpoint나 파일 위치를 가리키는 중복 finding은 병합한다.
 - `comparisonBasis`와 맞지 않는 finding type은 최종 결과에서 제외한다.
 - 사용자에게 필요한 조치는 기준본에 맞춰 작성하되, `unknown`에서는 수정 대상을 단정하지 않는다.
+
+## Current confidence scoring
+
+Current code recalculates final confidence after report merging. This rule overrides older cap-based confidence notes.
+
+- Document evidence: 25 points.
+- Code evidence: 25 points.
+- Same finding found by two analysis agents: 30 points.
+- Verifiable document or code location: 10 points.
+- Concrete recommendation: 10 points.
+
+The final report displays the total score as a percentage.

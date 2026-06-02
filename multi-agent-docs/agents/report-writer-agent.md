@@ -68,3 +68,15 @@
 위 정보를 병합해 최종 리포트를 작성하라.
 합의 항목, 추가 검토 필요 항목, 분석 결과 불일치, 분석 한계를 구분하라.
 ```
+
+## Current confidence scoring
+
+Current code recalculates final confidence after report merging. This rule overrides older cap-based confidence notes.
+
+- Document evidence: 25 points.
+- Code evidence: 25 points.
+- Same finding found by two analysis agents: 30 points.
+- Verifiable document or code location: 10 points.
+- Concrete recommendation: 10 points.
+
+The final report displays the total score as a percentage.

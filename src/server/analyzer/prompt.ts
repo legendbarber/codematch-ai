@@ -165,8 +165,8 @@ Rules:
 - Report likely issues, not absolute proof.
 - Use concrete evidence from both document and code.
 - Phrase absence as "수집·분석된 코드 범위에서 구현 근거를 확인하지 못했습니다" when code evidence is missing.
-- Prefer high confidence only when both sides are specific.
-- If evidence is weak, lower confidence instead of inventing details.
+- The final confidence is recalculated by code from five factors: document evidence, code evidence, two-agent agreement, verifiable locations, and concrete recommendation.
+- Still return a confidence number for schema compatibility, but prioritize filling evidence fields accurately over estimating confidence.
 - Do not introduce requirements that are not present in the uploaded documents or code.
 - If there is no meaningful mismatch, return an empty findings array with a concise summary.
 - Keep recommendations practical.
@@ -208,8 +208,8 @@ export function buildReportWriterPrompt({
 - 새로운 finding을 임의로 만들지 않는다. 제공된 분석 에이전트 결과와 정적 검증 후보 안의 근거만 사용한다.
 - 두 분석 에이전트가 같은 endpoint, 같은 코드 위치, 같은 문서 근거를 지적하면 합의 항목으로 우선 표시한다.
 - 정적 검증 후보가 분석 에이전트 결과와 같은 문제를 지적하면 근거 보강 신호로 사용한다.
-- 정적 검증 후보만 제기한 항목은 "추가 검토 필요"로 표시하고 confidence를 0.60 이하로 제한한다.
-- 한쪽 분석 에이전트만 제기한 항목은 "추가 검토 필요"로 표시하고 confidence를 0.65 이하로 제한한다.
+- confidence는 최종 병합 코드가 문서 근거 25점, 코드 근거 25점, 두 분석 에이전트 합의 30점, 확인 가능한 위치 10점, 구체적 권장 조치 10점 기준으로 다시 산출한다.
+- Report Agent는 confidence 숫자를 임의로 보정하지 말고, 위 계산에 필요한 근거 필드와 합의 여부를 보존한다.
 - 두 결과가 충돌하면 확정 표현을 피하고 recommendation에 충돌/확인 필요를 명시한다.
 - ${comparisonBasis === "code_latest" ? "code_latest에서는 outdated_doc만 최종 finding으로 남긴다." : ""}
 - ${comparisonBasis === "document_latest" ? "document_latest에서는 missing_feature와 api_mismatch만 최종 finding으로 남긴다." : ""}

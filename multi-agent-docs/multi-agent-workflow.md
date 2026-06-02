@@ -92,3 +92,15 @@ CodeMatchAA의 멀티 에이전트 분석은 `분석 계획 에이전트 -> 분�
 
 - 어느 쪽이 최신인지 결정하지 않는다.
 - 세 탐지 유형 모두 후보로 분석할 수 있지만, 수정 방향은 단정하지 않는다.
+
+## Current confidence scoring
+
+Current code recalculates final confidence after report merging. This rule overrides older cap-based confidence notes.
+
+- Document evidence: 25 points.
+- Code evidence: 25 points.
+- Same finding found by two analysis agents: 30 points.
+- Verifiable document or code location: 10 points.
+- Concrete recommendation: 10 points.
+
+The final report displays the total score as a percentage.
