@@ -22,7 +22,7 @@ const exampleAnalysis = {
     "예시 리포트입니다. '먼저 차이 후보만 넓게 보기' 기준으로 Northstar RetailOps 기술 문서와 legendbarber/test-retailops 구현을 비교했고, 알림 읽음 처리, 반복 증빙 반려 알림, 페이지 응답 메타데이터, 문서에 없는 intervention endpoint를 추가 검토 후보로 정리했습니다.",
   totalsJson: JSON.stringify({
     total: 4,
-    missingFeature: 2,
+    missingFeature: 3,
     apiMismatch: 0,
     outdatedDoc: 1,
     high: 1,

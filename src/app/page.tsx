@@ -9,7 +9,6 @@ import {
   Clock3,
   Code2,
   Copy,
-  Database,
   Download,
   ExternalLink,
   FileText,
@@ -999,8 +998,6 @@ export default function Home() {
           <Metric icon={<Flag />} label="Low" value={active?.totals.low ?? 0} tone="green" />
         </div>
 
-        {active ? <ReportStorageSummary analysis={active} /> : null}
-
         <div className="resultLayout">
           <div className="findings">
             {active?.status === "failed" ? (
@@ -1056,7 +1053,7 @@ export default function Home() {
         <div className="sectionHeader">
           <div>
             <h2>분석 히스토리</h2>
-            <p>영구 예시 리포트와 익명 세션 기준 최근 20개 분석이 표시됩니다.</p>
+            <p>기본 예시와 익명 세션 기준 최근 20개 분석이 표시됩니다.</p>
           </div>
           <History size={24} />
         </div>
@@ -1123,7 +1120,6 @@ function AnalysisReport({
         <ReportMeta label="Provider" value={analysis.provider.toUpperCase()} />
         <ReportMeta label="분석 기준" value={basisLabel(analysis.comparisonBasis)} />
         <ReportMeta label="완료 시각" value={completedAt} />
-        <ReportMeta label="분석 문서" value={`${analysis.documents.length}개`} />
         <ReportMeta label="단계 로그" value={`${completedSteps}/${analysis.steps.length}`} />
         <ReportMeta label="Finding" value={`${analysis.findings.length}개`} />
       </div>
@@ -1142,24 +1138,6 @@ function AnalysisReport({
         onDraftApiKeyChange={onDraftApiKeyChange}
         onGenerateDraft={onGenerateDraft}
       />
-
-      <section className="reportBlock">
-        <h4>업로드 문서</h4>
-        {analysis.documents.length ? (
-          <div className="reportDocuments">
-            {analysis.documents.map((document) => (
-              <div key={document.id}>
-                <strong>{document.name}</strong>
-                <span>
-                  {formatBytes(document.size)} · {document.extractedChars.toLocaleString("ko-KR")} chars extracted
-                </span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p>저장된 문서 메타데이터가 없습니다.</p>
-        )}
-      </section>
 
       <section className="reportBlock">
         <h4>탐지 결과</h4>
@@ -1338,58 +1316,6 @@ function BasisSpecificSection({
 function ReportMeta({ label, value }: { label: string; value: string }) {
   return (
     <div className="reportMeta">
-      <small>{label}</small>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
-function ReportStorageSummary({ analysis }: { analysis: AnalysisDetail }) {
-  const completedSteps = analysis.steps.filter((step) => step.status === "completed").length;
-  const title = analysis.isExample ? "영구 예시 리포트" : "DB 저장 확인";
-  const description = analysis.isExample
-    ? "이 리포트는 모든 세션에서 볼 수 있도록 앱에 번들된 예시 분석 데이터입니다."
-    : "이 리포트는 Supabase에 저장된 분석 데이터를 다시 불러와 표시합니다.";
-  return (
-    <section className="storageSummary" aria-label={title}>
-      <div className="storageTitle">
-        <Database size={20} />
-        <div>
-          <strong>{title}</strong>
-          <span>{description}</span>
-        </div>
-      </div>
-      <div className="storageGrid">
-        <StorageItem label="Analysis ID" value={analysis.id} />
-        <StorageItem
-          label="Repository"
-          value={analysis.repoOwner && analysis.repoName ? `${analysis.repoOwner}/${analysis.repoName}` : analysis.repoUrl}
-        />
-        <StorageItem label="Provider" value={analysis.provider.toUpperCase()} />
-        <StorageItem label="분석 기준" value={basisLabel(analysis.comparisonBasis)} />
-        <StorageItem label="Status" value={statusLabel(analysis.status)} />
-        <StorageItem label="문서 메타데이터" value={`${analysis.documents.length}개 저장`} />
-        <StorageItem label="단계 로그" value={`${completedSteps}/${analysis.steps.length} 완료`} />
-        <StorageItem label="Finding" value={`${analysis.findings.length}개 저장`} />
-        <StorageItem label="Artifact" value={`${analysis.artifacts.length}개 저장`} />
-        <StorageItem label="완료 시각" value={analysis.completedAt ? new Date(analysis.completedAt).toLocaleString("ko-KR") : "-"} />
-      </div>
-      {analysis.documents.length ? (
-        <div className="documentList">
-          {analysis.documents.map((document) => (
-            <span key={document.id}>
-              {document.name} · {formatBytes(document.size)} · {document.extractedChars.toLocaleString("ko-KR")} chars
-            </span>
-          ))}
-        </div>
-      ) : null}
-    </section>
-  );
-}
-
-function StorageItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="storageItem">
       <small>{label}</small>
       <strong>{value}</strong>
     </div>
@@ -1694,7 +1620,6 @@ function buildReportMarkdown(analysis: AnalysisDetail) {
     analysis.summary ?? "분석 결과 요약이 없습니다.",
     "",
     "## 메타 정보",
-    `- Analysis ID: ${analysis.id}`,
     `- Repository: ${repository}`,
     `- Provider: ${analysis.provider.toUpperCase()}`,
     `- 분석 기준: ${basisLabel(analysis.comparisonBasis)}`,
@@ -1713,9 +1638,6 @@ function buildReportMarkdown(analysis: AnalysisDetail) {
     `- 코드 청크 수: ${analysis.totals.scope?.codeChunkCount ?? 0}`,
     `- 문서 청크 수: ${analysis.totals.scope?.documentChunkCount ?? 0}`,
     "",
-    "## 업로드 문서",
-    ...documentMarkdownLines(analysis),
-    "",
     "## 분석 단계",
     ...stepMarkdownLines(analysis),
     "",
@@ -1728,15 +1650,6 @@ function buildReportMarkdown(analysis: AnalysisDetail) {
     "- 히스토리에서 이전 분석을 열어 변경 전후 리포트 차이를 비교하세요.",
     "",
   ].join("\n");
-}
-
-function documentMarkdownLines(analysis: AnalysisDetail) {
-  if (!analysis.documents.length) return ["저장된 문서 메타데이터가 없습니다."];
-
-  return analysis.documents.map(
-    (document) =>
-      `- ${document.name} (${formatBytes(document.size)}, ${document.extractedChars.toLocaleString("ko-KR")} chars extracted)`,
-  );
 }
 
 function stepMarkdownLines(analysis: AnalysisDetail) {
@@ -2190,18 +2103,11 @@ function buildPrintableReportHtml(analysis: AnalysisDetail) {
       <section class="section">
         <h2>메타 정보</h2>
         <div class="metaGrid">
-          ${printCard("Analysis ID", analysis.id)}
           ${printCard("Repository", repository)}
           ${printCard("Created", createdAt)}
-          ${printCard("분석 문서", `${analysis.documents.length}개`)}
           ${printCard("단계 로그", `${analysis.steps.filter((step) => step.status === "completed").length}/${analysis.steps.length} 완료`)}
           ${printCard("DB 저장", "Supabase 조회 데이터")}
         </div>
-      </section>
-
-      <section class="section">
-        <h2>업로드 문서</h2>
-        <div class="list">${printDocumentsHtml(analysis)}</div>
       </section>
 
       <section class="section">
@@ -2238,17 +2144,6 @@ function printMetric(label: string, value: number, tone: string) {
 
 function printCard(label: string, value: string) {
   return `<div class="card"><small>${escapeHtml(label)}</small><strong>${escapeHtml(value)}</strong></div>`;
-}
-
-function printDocumentsHtml(analysis: AnalysisDetail) {
-  if (!analysis.documents.length) return `<div class="row">저장된 문서 메타데이터가 없습니다.</div>`;
-
-  return analysis.documents
-    .map(
-      (document) =>
-        `<div class="row"><strong>${escapeHtml(document.name)}</strong>${escapeHtml(formatBytes(document.size))} · ${escapeHtml(document.extractedChars.toLocaleString("ko-KR"))} chars extracted</div>`,
-    )
-    .join("");
 }
 
 function printStepsHtml(analysis: AnalysisDetail) {
@@ -2329,7 +2224,6 @@ function buildMarkdownReport(analysis: AnalysisDetail) {
     `- Provider: ${analysis.provider.toUpperCase()}`,
     `- Status: ${statusLabel(analysis.status)}`,
     `- Completed At: ${analysis.completedAt ? new Date(analysis.completedAt).toLocaleString("ko-KR") : "-"}`,
-    `- Documents: ${analysis.documents.length}`,
     `- Findings: ${analysis.findings.length}`,
     "",
     "## Summary",
@@ -2341,13 +2235,6 @@ function buildMarkdownReport(analysis: AnalysisDetail) {
     analysis.reportRecommendationSummary.headline,
     "",
     ...analysis.reportRecommendationSummary.priorityActions.map((action) => `- ${action}`),
-    "",
-    "## Uploaded Documents",
-    "",
-    ...analysis.documents.map(
-      (document) =>
-        `- ${document.name} (${formatBytes(document.size)}, ${document.extractedChars.toLocaleString("ko-KR")} chars)`,
-    ),
     "",
     "## Findings",
     "",

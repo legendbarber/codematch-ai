@@ -16,6 +16,15 @@
 3. 업무 목록 페이지 응답 메타데이터 누락 후보
 4. `GET /tasks/:taskId/intervention-plan` endpoint가 기술 문서의 API/기능 목록에 명시되지 않은 후보
 
+## 집계
+
+- 총 불일치: 4
+- 기능 누락: 3
+- API 불일치: 0
+- Outdated 문서: 1
+- High: 1
+- Low: 3
+
 ## 저장 방식
 
 세션별 Supabase 히스토리는 사용자마다 달라지므로, 이 예시 리포트는 `src/server/example-analysis.ts`에 번들된 정적 분석 레코드로 제공한다. `/api/analyses` 응답의 첫 항목으로 항상 포함되며, `/api/analyses/example-northstar-retailops-wide`에서 세션 쿠키 없이 상세 조회할 수 있다.

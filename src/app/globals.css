@@ -650,81 +650,6 @@ h2 {
   font-size: 28px;
 }
 
-.storageSummary {
-  display: grid;
-  gap: 14px;
-  margin-top: 16px;
-  padding: 16px;
-  border: 1px solid #dbe4f2;
-  border-radius: 8px;
-  background: #fbfdff;
-}
-
-.storageTitle {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-}
-
-.storageTitle svg {
-  color: var(--blue);
-  flex: 0 0 auto;
-  margin-top: 1px;
-}
-
-.storageTitle div {
-  display: grid;
-  gap: 3px;
-}
-
-.storageTitle span,
-.documentList span {
-  color: var(--muted);
-  line-height: 1.5;
-}
-
-.storageGrid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.storageItem {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-  padding: 12px;
-  border: 1px solid #e0e7f2;
-  border-radius: 8px;
-  background: white;
-}
-
-.storageItem small {
-  color: #60708d;
-  font-weight: 800;
-}
-
-.storageItem strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.documentList {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.documentList span {
-  padding: 8px 10px;
-  border: 1px solid #e0e7f2;
-  border-radius: 999px;
-  background: white;
-  font-size: 13px;
-  font-weight: 800;
-}
-
 .resultLayout {
   display: grid;
   grid-template-columns: minmax(320px, 1fr) 290px;
@@ -779,8 +704,7 @@ h2 {
   gap: 10px;
 }
 
-.reportMeta,
-.reportDocuments > div {
+.reportMeta {
   display: grid;
   gap: 4px;
   min-width: 0;
@@ -795,8 +719,7 @@ h2 {
   font-weight: 800;
 }
 
-.reportMeta strong,
-.reportDocuments strong {
+.reportMeta strong {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -889,18 +812,6 @@ h2 {
   background: #fbfdff;
   line-height: 1.5;
   font-weight: 700;
-}
-
-.reportDocuments {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.reportDocuments span {
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 800;
 }
 
 .findingList {
@@ -1222,16 +1133,11 @@ h2 {
     grid-template-columns: repeat(2, minmax(140px, 1fr));
   }
 
-  .storageGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .findingBody {
     grid-template-columns: 1fr 1fr;
   }
 
-  .reportMetaGrid,
-  .reportDocuments {
+  .reportMetaGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1288,10 +1194,6 @@ h2 {
     grid-template-columns: 1fr;
   }
 
-  .storageGrid {
-    grid-template-columns: 1fr;
-  }
-
   .findingHeader {
     grid-template-columns: 1fr auto;
   }
@@ -1301,8 +1203,7 @@ h2 {
     flex-direction: column;
   }
 
-  .reportMetaGrid,
-  .reportDocuments {
+  .reportMetaGrid {
     grid-template-columns: 1fr;
   }
 
